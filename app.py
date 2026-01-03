@@ -30,15 +30,15 @@ def main():
             st.divider()
             
             # Navigation Buttons
-            if st.button("📊 Dashboard", use_container_width=True, type="primary" if st.session_state.current_page == "Dashboard" else "secondary"):
+            if st.button("📊 Dashboard", width="stretch", type="primary" if st.session_state.current_page == "Dashboard" else "secondary"):
                 st.session_state.current_page = "Dashboard"
                 st.rerun()
                 
-            if st.button("📝 Data Entry", use_container_width=True, type="primary" if st.session_state.current_page == "Data Entry" else "secondary"):
+            if st.button("📝 Data Entry", width="stretch", type="primary" if st.session_state.current_page == "Data Entry" else "secondary"):
                 st.session_state.current_page = "Data Entry"
                 st.rerun()
                 
-            if st.button("⚙️ Define Meter Types", use_container_width=True, type="primary" if st.session_state.current_page == "Define Meter Types" else "secondary"):
+            if st.button("⚙️ Define Meter Types", width="stretch", type="primary" if st.session_state.current_page == "Define Meter Types" else "secondary"):
                 st.session_state.current_page = "Define Meter Types"
                 st.rerun()
             

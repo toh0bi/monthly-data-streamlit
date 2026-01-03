@@ -47,7 +47,7 @@ def dashboard_page(db: DBHandler, user: User):
                 tooltip=['year', 'month_name', 'consumption']
             ).interactive()
             
-            st.altair_chart(line_chart, use_container_width=True)
+            st.altair_chart(line_chart, width="stretch")
             
             # --- 2. Yearly Stats ---
             st.subheader("Yearly Statistics")

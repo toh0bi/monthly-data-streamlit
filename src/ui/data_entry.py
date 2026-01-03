@@ -66,7 +66,7 @@ def data_entry_page(db: DBHandler, user: User):
                         "reading_date": "Date",
                         "meter_reading": "Value"
                     },
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True
                 )
                 
