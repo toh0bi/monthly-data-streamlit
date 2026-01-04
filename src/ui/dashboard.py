@@ -35,19 +35,50 @@ def dashboard_page(db: DBHandler, user: User):
             # Dynamic Title based on mode
             value_label = "Consumption" if eval_mode == 'difference' else "Average Value"
             
-            # --- 1. Multi-Year Line Chart ---
+            # --- 1. Charts ---
             st.subheader(f"Monthly {value_label} ({unit})")
             
-            # We want X=Month (Jan, Feb...), Y=Consumption, Color=Year
-            # Ensure month_index is sorted correctly
-            line_chart = alt.Chart(monthly_df).mark_line(point=True).encode(
-                x=alt.X('month_name', sort=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], title='Month'),
-                y=alt.Y('consumption', title=f'{value_label} ({unit})'),
-                color=alt.Color('year:O', title='Year', scale=alt.Scale(scheme='category10')), # High contrast colors
-                tooltip=['year', 'month_name', 'consumption']
-            ).interactive()
-            
-            st.altair_chart(line_chart, width="stretch")
+            # View Selection
+            view_mode = st.radio(
+                "View Mode", 
+                ["Year-over-Year", "Linear Trend"], 
+                horizontal=True, 
+                key=f"view_{m_type}", 
+                label_visibility="collapsed"
+            )
+
+            if view_mode == "Year-over-Year":
+                # We want X=Month (Jan, Feb...), Y=Consumption, Color=Year
+                # Ensure month_index is sorted correctly
+                line_chart = alt.Chart(monthly_df).mark_line(point=True).encode(
+                    x=alt.X('month_name', sort=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], title='Month'),
+                    y=alt.Y('consumption', title=f'{value_label} ({unit})'),
+                    color=alt.Color('year:O', title='Year', scale=alt.Scale(scheme='category10')), # High contrast colors
+                    tooltip=['year', 'month_name', 'consumption']
+                ).interactive()
+                
+                st.altair_chart(line_chart, width="stretch")
+                
+            else:
+                # Linear Trend with Regression
+                base = alt.Chart(monthly_df).encode(
+                    x=alt.X('date:T', title='Date', axis=alt.Axis(format='%b %Y', labelAngle=-45)),
+                    y=alt.Y('consumption', title=f'{value_label} ({unit})'),
+                    tooltip=['month_str', 'consumption']
+                )
+                
+                line = base.mark_line(point=True)
+                
+                # Regression Line
+                trend = base.transform_regression(
+                    'date', 'consumption', method="linear"
+                ).mark_line(
+                    color='red', 
+                    strokeDash=[5, 5],
+                    strokeWidth=2
+                )
+                
+                st.altair_chart((line + trend).interactive(), width="stretch")
             
             # --- 2. Yearly Stats ---
             st.subheader("Yearly Statistics")

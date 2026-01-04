@@ -43,54 +43,53 @@ def settings_page(db: DBHandler, user: User):
     for i, m_type in enumerate(current_types):
         if m_type == 'none': continue
         
-        # Layout: Up/Down Buttons | Expander
-        col_nav, col_content = st.columns([1, 6])
-        
-        with col_nav:
-            # Up Button
-            if i > 0:
-                if st.button("⬆️", key=f"up_{m_type}", help="Move Up"):
-                    current_types[i], current_types[i-1] = current_types[i-1], current_types[i]
-                    db.update_meter_types(user.user_id, current_types)
-                    st.rerun()
+        with st.expander(f"**{m_type}**", expanded=False):
+            # 1. Reordering Controls
+            c_up, c_down, c_fill = st.columns([1, 1, 2])
+            with c_up:
+                if i > 0:
+                    if st.button("⬆️ Up", key=f"up_{m_type}", use_container_width=True):
+                        current_types[i], current_types[i-1] = current_types[i-1], current_types[i]
+                        db.update_meter_types(user.user_id, current_types)
+                        st.rerun()
+            with c_down:
+                if i < len(current_types) - 1:
+                    if st.button("⬇️ Down", key=f"down_{m_type}", use_container_width=True):
+                        current_types[i], current_types[i+1] = current_types[i+1], current_types[i]
+                        db.update_meter_types(user.user_id, current_types)
+                        st.rerun()
             
-            # Down Button
-            if i < len(current_types) - 1:
-                if st.button("⬇️", key=f"down_{m_type}", help="Move Down"):
-                    current_types[i], current_types[i+1] = current_types[i+1], current_types[i]
-                    db.update_meter_types(user.user_id, current_types)
-                    st.rerun()
+            st.divider()
 
-        with col_content:
-            with st.expander(f"**{m_type}**", expanded=False):
-                col1, col2 = st.columns(2)
-                
-                # Unit
-                current_unit = db.get_meter_config(user.user_id, m_type, 'unit') or ''
-                new_unit = col1.text_input(f"Unit", value=current_unit, key=f"unit_{m_type}")
-                
-                # Evaluation Mode
-                current_mode = db.get_meter_config(user.user_id, m_type, 'eval_mode') or 'difference'
-                mode_options = {'difference': 'Cumulative (Difference)', 'absolute': 'Absolute (Average)'}
-                display_options = list(mode_options.values())
-                current_display = mode_options.get(current_mode, 'Cumulative (Difference)')
-                
-                new_display = col1.selectbox(
-                    f"Evaluation Mode", 
-                    display_options, 
-                    index=display_options.index(current_display),
-                    key=f"mode_{m_type}"
-                )
-                new_mode = [k for k, v in mode_options.items() if v == new_display][0]
+            # 2. Configuration
+            col1, col2 = st.columns(2)
+            
+            # Unit
+            current_unit = db.get_meter_config(user.user_id, m_type, 'unit') or ''
+            new_unit = col1.text_input(f"Unit", value=current_unit, key=f"unit_{m_type}")
+            
+            # Evaluation Mode
+            current_mode = db.get_meter_config(user.user_id, m_type, 'eval_mode') or 'difference'
+            mode_options = {'difference': 'Cumulative (Difference)', 'absolute': 'Absolute (Average)'}
+            display_options = list(mode_options.values())
+            current_display = mode_options.get(current_mode, 'Cumulative (Difference)')
+            
+            new_display = col1.selectbox(
+                f"Evaluation Mode", 
+                display_options, 
+                index=display_options.index(current_display),
+                key=f"mode_{m_type}"
+            )
+            new_mode = [k for k, v in mode_options.items() if v == new_display][0]
 
-                if col1.button(f"Save Configuration", key=f"save_{m_type}"):
-                    db.update_meter_config(user.user_id, m_type, 'unit', new_unit)
-                    db.update_meter_config(user.user_id, m_type, 'eval_mode', new_mode)
-                    st.success("Saved")
-                    
-                # Delete Type
-                if col2.button(f"Delete {m_type}", type="primary", key=f"del_{m_type}"):
-                    current_types.remove(m_type)
-                    db.update_meter_types(user.user_id, current_types)
-                    st.warning(f"Deleted {m_type}")
-                    st.rerun()
+            if col1.button(f"Save Configuration", key=f"save_{m_type}"):
+                db.update_meter_config(user.user_id, m_type, 'unit', new_unit)
+                db.update_meter_config(user.user_id, m_type, 'eval_mode', new_mode)
+                st.success("Saved")
+                
+            # Delete Type
+            if col2.button(f"Delete {m_type}", type="primary", key=f"del_{m_type}"):
+                current_types.remove(m_type)
+                db.update_meter_types(user.user_id, current_types)
+                st.warning(f"Deleted {m_type}")
+                st.rerun()
