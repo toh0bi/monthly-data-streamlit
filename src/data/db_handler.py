@@ -116,15 +116,20 @@ class DBHandler:
             if 'Item' in response:
                 item = response['Item']
                 if 'meter_types' in item:
-                    return item['meter_types'].get('SS', [])
+                    # Handle List (L) - preserves order
+                    if 'L' in item['meter_types']:
+                        return [x['S'] for x in item['meter_types']['L']]
+                    # Handle Set (SS) - legacy fallback, sorted
+                    elif 'SS' in item['meter_types']:
+                        return sorted(item['meter_types']['SS'])
             return []
         except Exception as e:
             print(f"Error getting meter types: {e}")
             return []
 
     def update_meter_types(self, user_id: str, meter_types: List[str]) -> bool:
-        if not meter_types:
-            meter_types = ['none'] # DynamoDB doesn't like empty sets
+        # Convert to DynamoDB List format to preserve order
+        dynamo_list = [{'S': mt} for mt in meter_types]
             
         try:
             self.dynamo.update_item(
@@ -135,7 +140,7 @@ class DBHandler:
                 },
                 UpdateExpression="SET meter_types = :mt",
                 ExpressionAttributeValues={
-                    ':mt': {'SS': meter_types}
+                    ':mt': {'L': dynamo_list}
                 }
             )
             return True
