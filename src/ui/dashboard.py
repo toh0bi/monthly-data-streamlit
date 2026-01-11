@@ -31,6 +31,30 @@ def dashboard_page(db: DBHandler, user: User):
             if monthly_df.empty:
                 st.info("Not enough data to calculate consumption.")
                 continue
+
+            # Year Slider Filter
+            min_year = int(monthly_df['year'].min())
+            max_year = int(monthly_df['year'].max())
+            
+            selected_years = (min_year, max_year)
+            if min_year < max_year:
+                selected_years = st.slider(
+                    "Filter Years",
+                    min_value=min_year,
+                    max_value=max_year,
+                    value=(min_year, max_year),
+                    key=f"year_slider_{m_type}"
+                )
+            
+            # Filter monthly_df based on selection
+            monthly_df = monthly_df[
+                (monthly_df['year'] >= selected_years[0]) & 
+                (monthly_df['year'] <= selected_years[1])
+            ]
+            
+            if monthly_df.empty:
+                st.info("No data in selected range.")
+                continue
                 
             # Dynamic Title based on mode
             value_label = "Consumption" if eval_mode == 'difference' else "Average Value"
@@ -85,6 +109,12 @@ def dashboard_page(db: DBHandler, user: User):
             stats_df = calculate_yearly_stats(readings, monthly_df)
             
             if not stats_df.empty:
+                # Apply filter to stats as well
+                stats_df = stats_df[
+                    (stats_df['year'] >= selected_years[0]) & 
+                    (stats_df['year'] <= selected_years[1])
+                ]
+
                 for _, row in stats_df.iterrows():
                     year = int(row['year'])
                     with st.expander(f"Year {year}", expanded=True):
