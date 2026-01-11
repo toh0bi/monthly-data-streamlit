@@ -92,8 +92,12 @@ def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFram
     readings_df['reading_date'] = pd.to_datetime(readings_df['reading_date'])
     readings_df['year'] = readings_df['reading_date'].dt.year
     
+    # Get intervals for accurate daily avg calculation
+    intervals_df = process_readings(readings)
+    
     stats = []
-    years = sorted(readings_df['year'].unique())
+    # Sort years descending
+    years = sorted(readings_df['year'].unique(), reverse=True)
     
     for year in years:
         # Filter readings for this year
@@ -104,26 +108,45 @@ def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFram
         year_monthly = monthly_df[monthly_df['year'] == year]
         total_consumption = year_monthly['consumption'].sum()
         
-        # Avg Monthly (only count months that have data > 0 or exist in the range)
-        # Using len(year_monthly) assumes we have rows for months. 
-        # Note: resample('ME') creates rows for all months in range.
-        # We should probably only count months that actually have consumption > 0 or are within the reading range.
-        # Let's use the count of months where consumption > 0 for now, or just 12 if full year?
-        # Legacy logic: months_with_data = len(monthly_data). 
-        # In our case, year_monthly contains all months in the range.
-        # Let's count months where consumption > 0.001 to avoid empty padding months if any
+        # Avg Monthly
         active_months = len(year_monthly[year_monthly['consumption'] > 0])
         avg_monthly = total_consumption / active_months if active_months > 0 else 0
         
-        # Avg Daily
-        # Span = last reading of year - first reading of year (or Jan 1st?)
-        # Legacy used: (last_date - first_date).days
-        first_date = year_readings['reading_date'].min()
-        last_date = year_readings['reading_date'].max()
-        day_span = (last_date - first_date).days
-        if day_span == 0: day_span = 1 # Avoid division by zero for single reading
+        # Avg Daily - calculate active days allocated to this year
+        active_days = 0
+        year_start = pd.Timestamp(year=year, month=1, day=1)
+        year_end = pd.Timestamp(year=year, month=12, day=31)
+        # We start counting from (year_start - 1 day) effectively for the interval logic
+        # Interval (D0, D1]. Days = D1 - D0.
+        # Intersect with [Jan 1, Dec 31].
+        # Is equivalent to Intersect (D0, D1] with (Dec 31 Prev, Dec 31 Curr].
+        year_start_limit = year_start - pd.Timedelta(days=1)
         
-        avg_daily = total_consumption / day_span if day_span > 0 else 0
+        if not intervals_df.empty:
+            for _, row in intervals_df.iterrows():
+                if pd.isna(row['prev_date']):
+                    continue
+                
+                # Interval: (prev_date, reading_date]
+                p_date = row['prev_date']
+                r_date = row['reading_date']
+                
+                # Check for overlap
+                if r_date <= year_start_limit or p_date >= year_end:
+                    continue
+                
+                # Calculate overlap
+                eff_start = max(p_date, year_start_limit)
+                eff_end = min(r_date, year_end)
+                
+                days = (eff_end - eff_start).days
+                if days > 0:
+                    active_days += days
+        
+        if active_days == 0:
+             active_days = 1 # Avoid division by zero
+        
+        avg_daily = total_consumption / active_days if active_days > 0 else 0
         
         stats.append({
             'year': year,
