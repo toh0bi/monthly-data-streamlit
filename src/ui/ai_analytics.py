@@ -28,6 +28,11 @@ def ai_analytics_page(db: DBHandler, user: User):
         return
     # -------------------
 
+    # Reset Button
+    if st.button("🗑️ Neuen Chat beginnen", type="secondary", help="Löscht den aktuellen Chatverlauf"):
+        st.session_state.messages = []
+        st.rerun()
+
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
