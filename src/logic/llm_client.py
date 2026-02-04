@@ -147,7 +147,11 @@ DATEN (CSV-Format):
             return result
 
         except Exception as e:
+            # DEBUGGING: Print full error to console
+            print(f"🚨 BEDROCK ERROR: {str(e)}")
+            
             error_msg = str(e)
             if "AccessDeniedException" in error_msg:
-                return "⚠️ Zugriff verweigert. Falls dies der erste Aufruf eines Anthropic-Modells in diesem AWS-Account ist, müssen ggf. erst Use-Case-Details in der AWS Console (Model Catalog) hinterlegt werden."
+                # Append the real error for debugging in UI too, nicely formatted
+                return f"⚠️ Zugriff verweigert.\n\n*Technischer Detail-Fehler:*\n`{error_msg}`\n\n(Bitte prüfe Region und Model Access in der AWS Console)."
             return f"Es ist ein Fehler bei der Kommunikation mit dem KI-Service aufgetreten: {error_msg}"
