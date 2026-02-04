@@ -152,6 +152,5 @@ DATEN (CSV-Format):
             
             error_msg = str(e)
             if "AccessDeniedException" in error_msg:
-                # Append the real error for debugging in UI too, nicely formatted
-                return f"⚠️ Zugriff verweigert.\n\n*Technischer Detail-Fehler:*\n`{error_msg}`\n\n(Bitte prüfe Region und Model Access in der AWS Console)."
-            return f"Es ist ein Fehler bei der Kommunikation mit dem KI-Service aufgetreten: {error_msg}"
+                return "⚠️ Zugriff verweigert. Bitte prüfe Region und Model Access in der AWS Console."
+            return f"Es ist ein Fehler bei der Kommunikation mit dem KI-Service aufgetreten"
