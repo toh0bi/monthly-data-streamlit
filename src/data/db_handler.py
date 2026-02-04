@@ -51,6 +51,43 @@ class DBHandler:
             print(f"Error creating user: {e}")
             return False
 
+    def increment_ai_quota(self, username: str, quota_month: str) -> bool:
+        try:
+            # Atomic counter update
+            # We also set the month to ensure we are resetting if month changed (logic handled in caller usually, but let's be safe)
+            # Actually, simpler: The caller checks the month. If month changed, we set to 1. If same month, we increment.
+            # But DynamoDB 'ADD' is good for increment.
+            
+            self.dynamo.update_item(
+                TableName=self.USER_TABLE_NAME,
+                Key={'username': {'S': username}},
+                UpdateExpression="SET ai_quota_used = ai_quota_used + :inc, quota_month = :qm",
+                ExpressionAttributeValues={
+                    ':inc': {'N': '1'},
+                    ':qm': {'S': quota_month}
+                }
+            )
+            return True
+        except Exception as e:
+            print(f"Error incrementing quota: {e}")
+            return False
+            
+    def reset_ai_quota(self, username: str, quota_month: str) -> bool:
+        try:
+            self.dynamo.update_item(
+                TableName=self.USER_TABLE_NAME,
+                Key={'username': {'S': username}},
+                UpdateExpression="SET ai_quota_used = :val, quota_month = :qm",
+                ExpressionAttributeValues={
+                    ':val': {'N': '1'}, # Start at 1 for the new request
+                    ':qm': {'S': quota_month}
+                }
+            )
+            return True
+        except Exception as e:
+            print(f"Error resetting quota: {e}")
+            return False
+
     # --- Meter Readings ---
     def get_readings(self, user_id: str, meter_type: str) -> List[MeterReading]:
         key_condition = Key(self.HASHKEY).eq(f'{user_id}_{meter_type}')

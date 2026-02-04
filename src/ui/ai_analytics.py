@@ -1,12 +1,32 @@
 import streamlit as st
+from datetime import datetime
 from src.data.db_handler import DBHandler
 from src.data.models import User
 from src.logic.llm_client import LLMClient
 from src.logic.analytics import calculate_monthly_consumption
 
+QUOTA_LIMIT = 50  # Hard limit per user per month
+
 def ai_analytics_page(db: DBHandler, user: User):
     st.header("🤖 Talk to your Data")
     st.caption("Analysiere deine Verbräuche mit KI-Unterstützung (Powered by AWS Bedrock / Claude 3.5 Sonnet)")
+
+    # --- Quota Check ---
+    current_month_str = datetime.now().strftime("%Y-%m")
+    
+    # Check if we need to reset quota view for new month logic
+    if user.quota_month != current_month_str:
+        user_quota_used = 0 # Will be reset in DB on next write
+    else:
+        user_quota_used = user.ai_quota_used
+        
+    st.progress(min(user_quota_used / QUOTA_LIMIT, 1.0), 
+                text=f"Monats-Quota: {user_quota_used}/{QUOTA_LIMIT} Anfragen")
+
+    if user_quota_used >= QUOTA_LIMIT:
+        st.error(f"Du hast dein monatliches Limit von {QUOTA_LIMIT} Anfragen erreicht. Komm nächsten Monat wieder!")
+        return
+    # -------------------
 
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -73,8 +93,21 @@ def ai_analytics_page(db: DBHandler, user: User):
                     # 2. Format Data
                     context_data = st.session_state.llm_client.format_readings(data_summary)
                     
-                    # 3. Call LLM
-                    response_text = st.session_state.llm_client.query(prompt, context_data)
+                    # 3. Call LLM with History
+                    # We pass the full session history (excluding the first greeting if role is assistant and it was hardcoded, 
+                    # but here we just pass everything. The LLM handles role 'assistant' correctly as past context.)
+                    response_text = st.session_state.llm_client.query(st.session_state.messages, context_data)
+                    
+                    # 4. Update Quota
+                    if "Es ist ein Fehler" not in response_text and "Zugriff verweigert" not in response_text:
+                        if user.quota_month != current_month_str:
+                            db.reset_ai_quota(user.username, current_month_str)
+                            # Update local session object immediately
+                            user.quota_month = current_month_str
+                            user.ai_quota_used = 1
+                        else:
+                            db.increment_ai_quota(user.username, current_month_str)
+                            user.ai_quota_used += 1
 
                 # Show result
                 message_placeholder.markdown(response_text)

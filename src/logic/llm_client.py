@@ -60,9 +60,10 @@ class LLMClient:
                 
         return "\n".join(lines)
 
-    def query(self, user_question: str, data_context: str) -> str:
+    def query(self, messages_history: List[Dict[str, str]], data_context: str) -> str:
         """
-        Sends the data context and user question to Claude via Bedrock.
+        Sends the data context and full chat history to Claude via Bedrock.
+        messages_history: List of dicts with 'role' (user/assistant) and 'content'
         """
         
         # System Prompt with Safety Guardrails
@@ -80,21 +81,28 @@ SICHERHEITS- UND VERHALTENSREGELN:
 DATEN (CSV-Format):
 """ + data_context
 
-        # Construct the messages payload
-        messages = [
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": user_question}]
-            }
-        ]
+        # Convert Streamlit chat history format to Bedrock/Claude format
+        # Streamlit: {"role": "user", "content": "..."}
+        # Claude: {"role": "user", "content": [{"type": "text", "text": "..."}]}
+        bedrock_messages = []
+        for msg in messages_history:
+            # Skip system messages or similar if they sneaked in (only user/assistant allowd)
+            if msg["role"] not in ["user", "assistant"]:
+                continue
+                
+            bedrock_messages.append({
+                "role": msg["role"],
+                "content": [{"type": "text", "text": msg["content"]}]
+            })
 
         # Request body for Claude 3
+        # We need to make sure we don't exceed context window, but for small history it's fine.
         body = json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 4000,
             "system": system_prompt,
-            "messages": messages,
-            "temperature": 0.1  # Low temperature for factual consistency
+            "messages": bedrock_messages,
+            "temperature": 0.1 
         })
 
         try:
