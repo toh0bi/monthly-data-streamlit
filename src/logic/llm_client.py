@@ -85,15 +85,44 @@ DATEN (CSV-Format):
         # Streamlit: {"role": "user", "content": "..."}
         # Claude: {"role": "user", "content": [{"type": "text", "text": "..."}]}
         bedrock_messages = []
+        
+        # Helper: Claude expects alternating user/assistant messages.
+        # We need to ensure we don't have user->user or assistant->assistant.
+        # Also, the first message MUST be user (system is separate).
+        
+        current_role = None
+        current_content_parts = []
+
         for msg in messages_history:
-            # Skip system messages or similar if they sneaked in (only user/assistant allowd)
-            if msg["role"] not in ["user", "assistant"]:
+            role = msg.get("role")
+            content = msg.get("content")
+
+            if role not in ["user", "assistant"] or not content:
                 continue
-                
-            bedrock_messages.append({
-                "role": msg["role"],
-                "content": [{"type": "text", "text": msg["content"]}]
-            })
+            
+            # If it's the first valid message, it must be 'user'. 
+            # If history starts with 'assistant' (e.g. greeting), we must skip it or prefix/hack it.
+            # Usually skipping the greeting is safest for API compliance if we have system prompt data context.
+            if not bedrock_messages and role == "assistant":
+                continue
+
+            if role == current_role:
+                # Same role twice in a row -> Append content to previous message
+                # (Claude usually handles text blocks concatenated just fine)
+                bedrock_messages[-1]["content"][0]["text"] += f"\n\n{content}"
+            else:
+                # New role -> New message
+                bedrock_messages.append({
+                    "role": role,
+                    "content": [{"type": "text", "text": content}]
+                })
+                current_role = role
+        
+        # Final check: Ensure we have at least one user message
+        if not bedrock_messages:
+             # Fallback if history was empty or only assistant
+             # This should barely happen if called correctly
+             return "Keine gültige Anfrage gefunden."
 
         # Request body for Claude 3
         # We need to make sure we don't exceed context window, but for small history it's fine.
