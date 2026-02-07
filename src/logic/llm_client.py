@@ -25,7 +25,9 @@ class LLMClient:
             self.bedrock = boto3.client('bedrock-runtime', region_name=self.region)
         
         # Model ID
-        self.model_id = "anthropic.claude-sonnet-4-5-20250929-v1:0" 
+        # WICHTIG: Sonnet 4.5 erfordert ein Inference Profile (z.B. 'eu.' oder 'us.' Prefix)
+        # Wir versuchen zuerst das EU-Profil.
+        self.model_id = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0" 
 
     def format_readings(self, data_summary: Dict[str, Any]) -> str:
         """
