@@ -27,13 +27,18 @@ def ai_data_entry_page(db: DBHandler, user: User):
                 
                 try:
                     data = json.loads(json_str)
-                    if not data:
+                    
+                    # Check for explicit error from backend
+                    if isinstance(data, dict) and "error" in data:
+                        st.error(f"KI-Fehler: {data['error']}")
+                    elif not data:
                         st.error("Konnte keine gültigen Daten finden.")
                     else:
                         st.session_state.import_preview_data = data
                         st.success(f"{len(data)} Datensätze gefunden!")
+                        
                 except json.JSONDecodeError:
-                    st.error("Fehler beim Verarbeiten der KI-Antwort.")
+                    st.error(f"Fehler beim Verarbeiten der Antwort: {json_str[:100]}...")
 
     # Preview & Save Area
     if "import_preview_data" in st.session_state and st.session_state.import_preview_data:
