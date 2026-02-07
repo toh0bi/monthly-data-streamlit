@@ -57,7 +57,8 @@ def dashboard_page(db: DBHandler, user: User):
                 continue
                 
             # Dynamic Title based on mode
-            value_label = "Consumption" if eval_mode == 'difference' else "Average Value"
+            # "Consumption" generalized to "Monthly Total" (for diffs) and "Value" (for absolute)
+            value_label = "Monthly Total" if eval_mode == 'difference' else "Value"
             
             # --- 1. Charts ---
             st.subheader(f"Monthly {value_label} ({unit})")

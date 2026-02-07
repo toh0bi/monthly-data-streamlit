@@ -82,17 +82,18 @@ def auth_flow(db: DBHandler):
     st.title("Welcome to Monthly Data Bot 📊")
     
     st.markdown("""
-    ### Your Personal Utility Tracker
+    ### Your Personal Data Tracker
     
-    Keep track of your monthly consumption for:
-    *   ⚡ **Electricity**
-    *   💧 **Water**
-    *   🔥 **Gas**
-    *   ☀️ **PV Generation**
+    Keep track of any monthly data you care about:
+    *   ⚡ **Utilities** (Electricity, Water, Gas, PV)
+    *   💪 **Health** (Body Weight, Gym Visits)
+    *   🌱 **Environment** (Rainfall, Temperature)
+    *   💰 **Finance** (Savings, Expenses)
     
     **Features:**
-    *   📅 **Easy Data Entry:** Smart forms that remember your last reading.
-    *   📈 **Interactive Dashboards:** Visualize trends and compare years.
+    *   📅 **Easy Data Entry:** Smart forms adapt to your data types.
+    *   📈 **Interactive Dashboards:** Visualize trends, seasonalities and compare years.
+    *   🤖 **AI Analysis:** Chat with your data using advanced AI.
     *   📱 **Mobile Friendly:** Works great on your phone.
     
     👈 **Please log in or register in the sidebar to continue.**

@@ -73,6 +73,16 @@ def data_entry_page(db: DBHandler, user: User):
                     key=f"history_{selected_type}"
                 )
                 
+                # CSV Download Button
+                csv = df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label=f"📥 Download {selected_type} History (CSV)",
+                    data=csv,
+                    file_name=f"{selected_type}_history.csv",
+                    mime="text/csv",
+                    key=f"dl_{selected_type}"
+                )
+                
                 # Handle deletion of selected rows
                 if len(event.selection.rows) > 0:
                     st.caption(f"{len(event.selection.rows)} readings selected")

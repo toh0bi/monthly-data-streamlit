@@ -9,7 +9,7 @@ QUOTA_LIMIT = 50  # Hard limit per user per month
 
 def ai_analytics_page(db: DBHandler, user: User):
     st.header("🤖 Talk to your Data")
-    st.caption("Analysiere deine Verbräuche mit KI-Unterstützung (Powered by AWS Bedrock / Claude 4.5 Sonnet)")
+    st.caption("Analysiere deine monatlichen Daten mit KI-Unterstützung (Powered by AWS Bedrock / Claude 4.5 Sonnet)")
 
     # --- Quota Check ---
     current_month_str = datetime.now().strftime("%Y-%m")
@@ -39,7 +39,7 @@ def ai_analytics_page(db: DBHandler, user: User):
         # Add an initial greeting
         st.session_state.messages.append({
             "role": "assistant", 
-            "content": "Hallo! Ich habe Zugriff auf deine Zählerstände. Frag mich etwas wie 'Wie viel Strom habe ich 2023 verbraucht?' oder 'Vergleiche den Wasserverbrauch der letzten zwei Jahre'."
+            "content": "Hallo! Ich habe Zugriff auf deine monatlichen Daten. Frag mich nach Trends, Vergleichen oder Details – zum Beispiel 'Wie war mein Stromverbrauch 2023?', 'Analysiere meinen Gewichtsverlauf' oder 'Regnet es dieses Jahr mehr als letztes Jahr?'."
         })
 
     # Initialize LLM Client (cached to avoid re-init per rerun)

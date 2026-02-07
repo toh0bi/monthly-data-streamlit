@@ -48,8 +48,8 @@ def main():
                 st.session_state.current_page = "AI Analysis"
                 st.rerun()
 
-            if st.button("⚙️ Define Meter Types", width="stretch", type="primary" if st.session_state.current_page == "Define Meter Types" else "secondary"):
-                st.session_state.current_page = "Define Meter Types"
+            if st.button("⚙️ Define Data Categories", width="stretch", type="primary" if st.session_state.current_page == "Define Data Categories" else "secondary"):
+                st.session_state.current_page = "Define Data Categories"
                 st.rerun()
             
             st.divider()
@@ -66,7 +66,7 @@ def main():
             ai_data_entry_page(db, user)
         elif st.session_state.current_page == "AI Analysis":
             ai_analytics_page(db, user)
-        elif st.session_state.current_page == "Define Meter Types":
+        elif st.session_state.current_page == "Define Data Categories":
             settings_page(db, user)
 
 if __name__ == "__main__":
