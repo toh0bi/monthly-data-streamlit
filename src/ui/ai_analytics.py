@@ -9,7 +9,7 @@ QUOTA_LIMIT = 50  # Hard limit per user per month
 
 def ai_analytics_page(db: DBHandler, user: User):
     st.header("🤖 Talk to your Data")
-    st.caption("Analysiere deine Verbräuche mit KI-Unterstützung (Powered by AWS Bedrock / Claude 3.5 Sonnet)")
+    st.caption("Analysiere deine Verbräuche mit KI-Unterstützung (Powered by AWS Bedrock / Claude 4.5 Sonnet)")
 
     # --- Quota Check ---
     current_month_str = datetime.now().strftime("%Y-%m")

@@ -5,6 +5,7 @@ from src.ui.dashboard import dashboard_page
 from src.ui.data_entry import data_entry_page
 from src.ui.settings import settings_page
 from src.ui.ai_analytics import ai_analytics_page
+from src.ui.ai_data_entry import ai_data_entry_page
 
 import os
 
@@ -38,6 +39,10 @@ def main():
             if st.button("📝 Data Entry", width="stretch", type="primary" if st.session_state.current_page == "Data Entry" else "secondary"):
                 st.session_state.current_page = "Data Entry"
                 st.rerun()
+
+            if st.button("🤖 AI Data Import", width="stretch", type="primary" if st.session_state.current_page == "AI Data Import" else "secondary"):
+                st.session_state.current_page = "AI Data Import"
+                st.rerun()
                 
             if st.button("🤖 AI Analysis", width="stretch", type="primary" if st.session_state.current_page == "AI Analysis" else "secondary"):
                 st.session_state.current_page = "AI Analysis"
@@ -57,6 +62,8 @@ def main():
             dashboard_page(db, user)
         elif st.session_state.current_page == "Data Entry":
             data_entry_page(db, user)
+        elif st.session_state.current_page == "AI Data Import":
+            ai_data_entry_page(db, user)
         elif st.session_state.current_page == "AI Analysis":
             ai_analytics_page(db, user)
         elif st.session_state.current_page == "Define Meter Types":
