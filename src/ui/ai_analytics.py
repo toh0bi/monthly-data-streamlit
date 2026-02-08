@@ -4,12 +4,13 @@ from src.data.db_handler import DBHandler
 from src.data.models import User
 from src.logic.llm_client import LLMClient
 from src.logic.analytics import calculate_monthly_consumption
+from src.ui.i18n import t
 
 QUOTA_LIMIT = 50  # Hard limit per user per month
 
 def ai_analytics_page(db: DBHandler, user: User):
-    st.header("🤖 Talk to your Data")
-    st.caption("Analysiere deine monatlichen Daten mit KI-Unterstützung (Powered by AWS Bedrock / Claude 4.5 Sonnet)")
+    st.header(t("🤖 Talk to your Data"))
+    st.caption(t("Analyze your monthly data with AI support (Powered by AWS Bedrock / Claude 3.5 Sonnet)"))
 
     # --- Quota Check ---
     current_month_str = datetime.now().strftime("%Y-%m")
@@ -21,15 +22,15 @@ def ai_analytics_page(db: DBHandler, user: User):
         user_quota_used = user.ai_quota_used
         
     st.progress(min(user_quota_used / QUOTA_LIMIT, 1.0), 
-                text=f"Monats-Quota: {user_quota_used}/{QUOTA_LIMIT} Anfragen")
+                text=t("Monthly Quota: {}/{} requests", user_quota_used, QUOTA_LIMIT))
 
     if user_quota_used >= QUOTA_LIMIT:
-        st.error(f"Du hast dein monatliches Limit von {QUOTA_LIMIT} Anfragen erreicht. Komm nächsten Monat wieder!")
+        st.error(t("You have reached your monthly limit of {} requests. Come back next month!", QUOTA_LIMIT))
         return
     # -------------------
 
     # Reset Button
-    if st.button("🗑️ Neuen Chat beginnen", type="secondary", help="Löscht den aktuellen Chatverlauf"):
+    if st.button(t("🗑️ Start new chat"), type="secondary", help=t("Clears the current chat history")):
         st.session_state.messages = []
         st.rerun()
 
@@ -39,7 +40,7 @@ def ai_analytics_page(db: DBHandler, user: User):
         # Add an initial greeting
         st.session_state.messages.append({
             "role": "assistant", 
-            "content": "Hallo! Ich habe Zugriff auf deine monatlichen Daten. Frag mich nach Trends, Vergleichen oder Details – zum Beispiel 'Wie war mein Stromverbrauch 2023?', 'Analysiere meinen Gewichtsverlauf' oder 'Regnet es dieses Jahr mehr als letztes Jahr?'."
+            "content": t("CHAT_GREETING")
         })
 
     # Initialize LLM Client (cached to avoid re-init per rerun)
@@ -53,7 +54,7 @@ def ai_analytics_page(db: DBHandler, user: User):
             st.markdown(message["content"])
 
     # React to user input
-    if prompt := st.chat_input("Stelle eine Frage zu deinen Daten..."):
+    if prompt := st.chat_input(t("Ask a question about your data...")):
         # Display user message in chat message container
         st.chat_message("user").markdown(prompt)
         # Add user message to chat history
@@ -62,7 +63,7 @@ def ai_analytics_page(db: DBHandler, user: User):
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
-            message_placeholder.markdown("⏳ *Analysiere Daten...*")
+            message_placeholder.markdown(t("⏳ *Analyzing data...*"))
             
             try:
                 # 1. Fetch Data
@@ -71,7 +72,7 @@ def ai_analytics_page(db: DBHandler, user: User):
                 data_summary = {}
                 
                 if not meter_types:
-                    response_text = "Ich finde leider keine Zählerdaten in deinem Profil. Bitte füge erst Daten im Dashboard hinzu."
+                    response_text = t("Unfortunately, I cannot find any meter data in your profile. Please add data in the dashboard first.")
                 else:
                     for mt in meter_types:
                         readings = db.get_readings(user.user_id, mt)
@@ -92,7 +93,7 @@ def ai_analytics_page(db: DBHandler, user: User):
                             }
                     
                     if not data_summary:
-                        st.warning("Keine ausreichenden Daten für eine Analyse vorhanden.")
+                        st.warning(t("Insufficient data available for analysis."))
                         st.stop()
                     
                     # 2. Format Data

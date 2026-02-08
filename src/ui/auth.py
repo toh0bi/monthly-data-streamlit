@@ -3,6 +3,7 @@ import bcrypt
 import os
 from src.data.db_handler import DBHandler
 from src.data.models import User
+from src.ui.i18n import t
 from datetime import datetime
 import uuid
 
@@ -14,36 +15,36 @@ def check_password(password: str, hashed: str) -> bool:
 
 def login_form(db: DBHandler):
     with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("Login")
+        username = st.text_input(t("Username"))
+        password = st.text_input(t("Password"), type="password")
+        submit = st.form_submit_button(t("Login"))
         
         if submit:
             user = db.get_user(username)
             if user and check_password(password, user.password_hash):
                 st.session_state['user'] = user
-                st.success(f"Welcome back, {user.username}!")
+                st.success(t("Welcome back, {}!", user.username))
                 st.rerun()
             else:
-                st.error("Invalid username or password")
+                st.error(t("Invalid username or password"))
 
 def register_form(db: DBHandler):
     with st.form("register_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        password_confirm = st.text_input("Confirm Password", type="password")
+        username = st.text_input(t("Username"))
+        password = st.text_input(t("Password"), type="password")
+        password_confirm = st.text_input(t("Confirm Password"), type="password")
         # Optional: Allow linking to old chat_id for migration
-        old_chat_id = st.text_input("Legacy Chat ID (Optional)")
+        old_chat_id = st.text_input(t("Legacy Chat ID (Optional)"))
         
-        submit = st.form_submit_button("Register")
+        submit = st.form_submit_button(t("Register"))
         
         if submit:
             if password != password_confirm:
-                st.error("Passwords do not match")
+                st.error(t("Passwords do not match"))
                 return
             
             if db.get_user(username):
-                st.error("Username already exists")
+                st.error(t("Username already exists"))
                 return
             
             user_id = old_chat_id if old_chat_id else str(uuid.uuid4())
@@ -56,9 +57,9 @@ def register_form(db: DBHandler):
             )
             
             if db.create_user(new_user):
-                st.success("Registration successful! Please login.")
+                st.success(t("Registration successful! Please login."))
             else:
-                st.error("Registration failed. Please try again.")
+                st.error(t("Registration failed. Please try again."))
 
 def auth_flow(db: DBHandler):
     if 'user' in st.session_state:
@@ -68,9 +69,9 @@ def auth_flow(db: DBHandler):
     with st.sidebar:
         if os.path.exists("logo.png"):
             st.image("logo.png", width="stretch")
-        st.title("Monthly Data Bot")
+        st.title(t("Monthly Data Bot"))
         
-        tab_login, tab_register = st.tabs(["Login", "Register"])
+        tab_login, tab_register = st.tabs([t("Login"), t("Register")])
         
         with tab_login:
             login_form(db)
@@ -79,24 +80,8 @@ def auth_flow(db: DBHandler):
             register_form(db)
 
     # Main Area: Description
-    st.title("Welcome to Monthly Data Bot 📊")
+    st.title(t("Welcome to Monthly Data Bot 📊"))
     
-    st.markdown("""
-    ### Your Personal Data Tracker
-    
-    Keep track of any monthly data you care about:
-    *   ⚡ **Utilities** (Electricity, Water, Gas, PV)
-    *   💪 **Health** (Body Weight, Gym Visits)
-    *   🌱 **Environment** (Rainfall, Temperature)
-    *   💰 **Finance** (Savings, Expenses)
-    
-    **Features:**
-    *   📅 **Easy Data Entry:** Smart forms adapt to your data types.
-    *   📈 **Interactive Dashboards:** Visualize trends, seasonalities and compare years.
-    *   🤖 **AI Analysis:** Chat with your data using advanced AI.
-    *   📱 **Mobile Friendly:** Works great on your phone.
-    
-    👈 **Please log in or register in the sidebar to continue.**
-    """)
+    st.markdown(t("HOME_PAGE_DESCRIPTION"))
     
     return None

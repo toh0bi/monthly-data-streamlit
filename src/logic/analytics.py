@@ -78,8 +78,12 @@ def calculate_monthly_consumption(readings: list[MeterReading], eval_mode: str =
     result.columns = ['date', 'consumption']
     result['month_str'] = result['date'].dt.strftime('%Y-%m')
     result['year'] = result['date'].dt.year
-    result['month_name'] = result['date'].dt.strftime('%b') # Jan, Feb...
+    
+    # Ensure English month names regardless of system locale
+    english_months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     result['month_index'] = result['date'].dt.month
+    # dt.month is 1-based (Jan=1), list is 0-based
+    result['month_name'] = result['month_index'].apply(lambda x: english_months[x-1])
     
     return result
 

@@ -6,6 +6,7 @@ from src.ui.data_entry import data_entry_page
 from src.ui.settings import settings_page
 from src.ui.ai_analytics import ai_analytics_page
 from src.ui.ai_data_entry import ai_data_entry_page
+from src.ui.i18n import t
 
 import os
 
@@ -13,6 +14,10 @@ import os
 st.set_page_config(page_title="Monthly Data Bot", layout="wide", page_icon="📊")
 
 def main():
+    # Initialize language
+    if 'language' not in st.session_state:
+        st.session_state.language = 'en'
+
     db = DBHandler()
     
     user = auth_flow(db)
@@ -27,25 +32,40 @@ def main():
             if os.path.exists("logo.png"):
                 st.image("logo.png", width="stretch")
             
-            st.title("Monthly Data Bot")
-            st.caption(f"Logged in as **{user.username}**")
+            st.title(t("Monthly Data Bot"))
+            st.caption(f"{t('Logged in as')} **{user.username}**")
             st.divider()
             
             # Navigation Buttons
-            if st.button("📊 Dashboard", width="stretch", type="primary" if st.session_state.current_page == "Dashboard" else "secondary"):
+            if st.button(f"📊 {t('Dashboard')}", width="stretch", type="primary" if st.session_state.current_page == "Dashboard" else "secondary"):
                 st.session_state.current_page = "Dashboard"
                 st.rerun()
                 
-            if st.button("📝 Data Entry", width="stretch", type="primary" if st.session_state.current_page == "Data Entry" else "secondary"):
+            if st.button(f"📝 {t('Data Entry')}", width="stretch", type="primary" if st.session_state.current_page == "Data Entry" else "secondary"):
                 st.session_state.current_page = "Data Entry"
                 st.rerun()
 
-            if st.button("🤖 AI Data Import", width="stretch", type="primary" if st.session_state.current_page == "AI Data Import" else "secondary"):
+            if st.button(f"🤖 {t('AI Data Import')}", width="stretch", type="primary" if st.session_state.current_page == "AI Data Import" else "secondary"):
                 st.session_state.current_page = "AI Data Import"
                 st.rerun()
                 
-            if st.button("🤖 AI Analysis", width="stretch", type="primary" if st.session_state.current_page == "AI Analysis" else "secondary"):
+            if st.button(f"🤖 {t('AI Analysis')}", width="stretch", type="primary" if st.session_state.current_page == "AI Analysis" else "secondary"):
                 st.session_state.current_page = "AI Analysis"
+                st.rerun()
+
+            st.divider()
+            
+            # Language Selector
+            lang_options = {"en": "🇬🇧 English", "de": "🇩🇪 Deutsch"}
+            selected_lang = st.selectbox(
+                "Language / Sprache", 
+                options=list(lang_options.keys()), 
+                format_func=lambda x: lang_options[x],
+                index=0 if st.session_state.language == 'en' else 1
+            )
+            
+            if selected_lang != st.session_state.language:
+                st.session_state.language = selected_lang
                 st.rerun()
 
             if st.button("⚙️ Define Data Categories", width="stretch", type="primary" if st.session_state.current_page == "Define Data Categories" else "secondary"):

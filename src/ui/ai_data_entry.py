@@ -4,24 +4,25 @@ import pandas as pd
 from src.data.db_handler import DBHandler
 from src.data.models import User, MeterReading
 from src.logic.llm_client import LLMClient
+from src.ui.i18n import t
 
 def ai_data_entry_page(db: DBHandler, user: User):
-    st.header("🤖 AI Data Import")
-    st.caption("Füge chaotische Daten einfach per Copy & Paste ein. Die KI strukturiert sie für dich.")
+    st.header(t("🤖 AI Data Import"))
+    st.caption(t("Paste chaotic data simply via Copy & Paste. The AI structures it for you."))
 
     # Initialize LLM
     if "llm_client" not in st.session_state:
         st.session_state.llm_client = LLMClient(region_name="eu-central-1")
 
     # Input Area
-    raw_text = st.text_area("Daten hier einfügen (Excel, CSV, Notizen...)", height=200, 
-                            placeholder="Beispiel:\nJan 2023: Strom 1050, Wasser 50\nFeb 2023: Strom 1120, Wasser 52\n...")
+    raw_text = st.text_area(t("Paste data here (Excel, CSV, Notes...)"), height=200, 
+                            placeholder=t("Example:\nJan 2023: Electricity 1050, Water 50\nFeb 2023: Electricity 1120, Water 52\n..."))
 
-    if st.button("KI-Analyse starten", type="primary"):
+    if st.button(t("Start AI Analysis"), type="primary"):
         if not raw_text.strip():
-            st.warning("Bitte gib erst Text ein.")
+            st.warning(t("Please enter text first."))
         else:
-            with st.spinner("Analysiere Struktur..."):
+            with st.spinner(t("Analyzing structure...")):
                 meter_types = db.get_meter_types(user.user_id)
                 json_str = st.session_state.llm_client.parse_smart_import(raw_text, meter_types)
                 
@@ -30,20 +31,20 @@ def ai_data_entry_page(db: DBHandler, user: User):
                     
                     # Check for explicit error from backend
                     if isinstance(data, dict) and "error" in data:
-                        st.error(f"KI-Fehler: {data['error']}")
+                        st.error(t("AI Error: {}", data['error']))
                     elif not data:
-                        st.error("Konnte keine gültigen Daten finden.")
+                        st.error(t("Could not find valid data."))
                     else:
                         st.session_state.import_preview_data = data
-                        st.success(f"{len(data)} Datensätze gefunden!")
+                        st.success(t("{} records found!", len(data)))
                         
                 except json.JSONDecodeError:
-                    st.error(f"Fehler beim Verarbeiten der Antwort: {json_str[:100]}...")
+                    st.error(t("Error processing response: {}...", json_str[:100]))
 
     # Preview & Save Area
     if "import_preview_data" in st.session_state and st.session_state.import_preview_data:
         st.divider()
-        st.subheader("Vorschau")
+        st.subheader(t("Preview"))
         
         # Edit Dataframe allow
         df = pd.DataFrame(st.session_state.import_preview_data)
@@ -51,7 +52,7 @@ def ai_data_entry_page(db: DBHandler, user: User):
         
         col1, col2 = st.columns(2)
         with col1:
-             if st.button("💾 Alle speichern", type="primary"):
+             if st.button(t("💾 Save All"), type="primary"):
                 saved_count = 0
                 for _, row in edited_df.iterrows():
                     # Create Reading Object
@@ -65,13 +66,13 @@ def ai_data_entry_page(db: DBHandler, user: User):
                         if db.add_reading(user.user_id, reading):
                             saved_count += 1
                     except Exception as e:
-                        st.error(f"Fehler bei Zeile {row}: {e}")
+                        st.error(t("Error at row {}: {}", row, e))
                 
-                st.success(f"{saved_count} Einträge erfolgreich gespeichert!")
+                st.success(t("{} records successfully saved!", saved_count))
                 del st.session_state.import_preview_data # Clear
                 # Refresh meter types if new ones appeared (optional logic)
         
         with col2:
-            if st.button("Abbrechen"):
+            if st.button(t("Cancel")):
                 del st.session_state.import_preview_data
                 st.rerun()
