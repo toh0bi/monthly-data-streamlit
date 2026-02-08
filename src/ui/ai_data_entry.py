@@ -14,17 +14,37 @@ def ai_data_entry_page(db: DBHandler, user: User):
     if "llm_client" not in st.session_state:
         st.session_state.llm_client = LLMClient(region_name="eu-central-1")
 
-    # Input Area
-    raw_text = st.text_area(t("Paste data here (Excel, CSV, Notes...)"), height=200, 
-                            placeholder=t("Example:\nJan 2023: Electricity 1050, Water 50\nFeb 2023: Electricity 1120, Water 52\n..."))
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Input Area - Text
+        raw_text = st.text_area(t("Paste data here (Excel, CSV, Notes...)"), height=200, 
+                                placeholder=t("Example:\nJan 2023: Electricity 1050, Water 50\nFeb 2023: Electricity 1120, Water 52\n..."))
+    
+    with col2:
+        # Input Area - Image
+        uploaded_file = st.file_uploader(t("Or upload an image (Photo, Scan)"), type=['png', 'jpg', 'jpeg'])
 
     if st.button(t("Start AI Analysis"), type="primary"):
-        if not raw_text.strip():
-            st.warning(t("Please enter text first."))
+        if not raw_text.strip() and not uploaded_file:
+            st.warning(t("Please enter text or upload an image."))
         else:
-            with st.spinner(t("Analyzing structure...")):
+            with st.spinner(t("Analyzing data...")):
                 meter_types = db.get_meter_types(user.user_id)
-                json_str = st.session_state.llm_client.parse_smart_import(raw_text, meter_types)
+                
+                image_bytes = None
+                media_type = "image/jpeg"
+                
+                if uploaded_file:
+                    image_bytes = uploaded_file.getvalue()
+                    media_type = uploaded_file.type
+                
+                json_str = st.session_state.llm_client.parse_smart_import(
+                    raw_text, 
+                    meter_types, 
+                    image_data=image_bytes, 
+                    media_type=media_type
+                )
                 
                 try:
                     data = json.loads(json_str)

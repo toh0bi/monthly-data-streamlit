@@ -1,7 +1,8 @@
 import boto3
 import json
+import base64
 import streamlit as st
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from src.data.models import MeterReading
 
 class LLMClient:
@@ -61,15 +62,15 @@ class LLMClient:
                 
         return "\n".join(lines)
 
-    def parse_smart_import(self, raw_text: str, meter_types: List[str]) -> str:
+    def parse_smart_import(self, raw_text: str, meter_types: List[str], image_data: Optional[bytes] = None, media_type: str = "image/jpeg") -> str:
         """
-        Parses unstructured text and tries to extract readings for the given meter types.
+        Parses unstructured text and/or image to extract readings for the given meter types.
         Returns a JSON string (List of dicts).
         """
         meter_types_str = ", ".join(meter_types) if meter_types else "Any detected meter"
         
         system_prompt = f"""You are a Data Extraction Assistant.
-Your task is to extract structured meter reading data from unstructured user input.
+Your task is to extract structured meter reading data from unstructured user input (text or image).
 Known Meter Types: {meter_types_str}
 
 RULES:
@@ -85,9 +86,32 @@ RULES:
 6. If no data found, return empty list [].
 """
         
+        content = []
+        
+        # Add Text if present
+        if raw_text:
+            content.append({"type": "text", "text": raw_text})
+            
+        # Add Image if present
+        if image_data:
+            img_b64 = base64.b64encode(image_data).decode("utf-8")
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": img_b64
+                }
+            })
+            # Add a hint about the image
+            content.append({"type": "text", "text": "Please analyze this image for tabular data or handwritten notes containing reading values."})
+            
+        if not content:
+            return "[]"
+
         user_message = {
             "role": "user",
-            "content": [{"type": "text", "text": raw_text}]
+            "content": content
         }
 
         body = json.dumps({
