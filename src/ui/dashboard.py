@@ -126,7 +126,7 @@ def dashboard_page(db: DBHandler, user: User):
 
                 for _, row in stats_df.iterrows():
                     year = int(row['year'])
-                    with st.expander(t("Year {}", year), expanded=True):
+                    with st.expander(t("Year {}", year), expanded=False):
                         # Use 2x2 grid for better mobile responsiveness
                         c1, c2 = st.columns(2)
                         c1.metric(t("Data Points"), int(row['data_points']))
