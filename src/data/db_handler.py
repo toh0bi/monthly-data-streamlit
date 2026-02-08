@@ -89,6 +89,25 @@ class DBHandler:
             print(f"Error resetting quota: {e}")
             return False
 
+    def update_user_stats(self, username: str) -> bool:
+        try:
+            from datetime import datetime
+            today = datetime.now().strftime('%Y-%m-%d')
+            
+            self.dynamo.update_item(
+                TableName=self.USER_TABLE_NAME,
+                Key={'username': {'S': username}},
+                UpdateExpression="SET last_login = :ll ADD login_count :inc",
+                ExpressionAttributeValues={
+                    ':ll': {'S': today},
+                    ':inc': {'N': '1'}
+                }
+            )
+            return True
+        except Exception as e:
+            print(f"Error updating user stats: {e}")
+            return False
+
     # --- Meter Readings ---
     def get_readings(self, user_id: str, meter_type: str) -> List[MeterReading]:
         key_condition = Key(self.HASHKEY).eq(f'{user_id}_{meter_type}')

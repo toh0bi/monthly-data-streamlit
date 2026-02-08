@@ -26,6 +26,7 @@ def login_form(db: DBHandler):
             
             user = db.get_user(username)
             if user and check_password(password, user.password_hash):
+                db.update_user_stats(user.username)
                 st.session_state['user'] = user
                 st.success(t("Welcome back, {}!", user.username))
                 st.rerun()

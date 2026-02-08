@@ -36,6 +36,8 @@ class User:
     created_at: str
     ai_quota_used: int = 0
     quota_month: str = "" # YYYY-MM
+    last_login: str = ""  # YYYY-MM-DD
+    login_count: int = 0
 
     def to_dynamo_item(self) -> dict:
         return {
@@ -44,7 +46,9 @@ class User:
             'password_hash': {'S': self.password_hash},
             'created_at': {'S': self.created_at},
             'ai_quota_used': {'N': str(self.ai_quota_used)},
-            'quota_month': {'S': self.quota_month}
+            'quota_month': {'S': self.quota_month},
+            'last_login': {'S': self.last_login},
+            'login_count': {'N': str(self.login_count)}
         }
 
     @staticmethod
@@ -55,5 +59,7 @@ class User:
             password_hash=item.get('password_hash', {}).get('S', ''),
             created_at=item.get('created_at', {}).get('S', ''),
             ai_quota_used=int(item.get('ai_quota_used', {}).get('N', 0)),
-            quota_month=item.get('quota_month', {}).get('S', '')
+            quota_month=item.get('quota_month', {}).get('S', ''),
+            last_login=item.get('last_login', {}).get('S', ''),
+            login_count=int(item.get('login_count', {}).get('N', 0))
         )
