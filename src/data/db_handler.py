@@ -30,7 +30,8 @@ class DBHandler:
         try:
             response = self.dynamo.get_item(
                 TableName=self.USER_TABLE_NAME,
-                Key={'username': {'S': username}}
+                Key={'username': {'S': username}},
+                ConsistentRead=True
             )
             if 'Item' in response:
                 return User.from_dynamo_item(response['Item'])

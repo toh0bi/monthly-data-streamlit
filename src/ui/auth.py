@@ -20,6 +20,10 @@ def login_form(db: DBHandler):
         submit = st.form_submit_button(t("Login"))
         
         if submit:
+            # Clean input
+            username = username.strip()
+            password = password.strip()
+            
             user = db.get_user(username)
             if user and check_password(password, user.password_hash):
                 st.session_state['user'] = user
@@ -39,6 +43,12 @@ def register_form(db: DBHandler):
         submit = st.form_submit_button(t("Register"))
         
         if submit:
+            # Clean input
+            username = username.strip()
+            password = password.strip()
+            password_confirm = password_confirm.strip()
+            old_chat_id = old_chat_id.strip()
+
             if password != password_confirm:
                 st.error(t("Passwords do not match"))
                 return
