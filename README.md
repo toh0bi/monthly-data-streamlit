@@ -15,7 +15,7 @@ A Streamlit application for tracking and visualizing monthly meter readings (e.g
 ## Prerequisites
 
 -   Python 3.9+
--   AWS Account with DynamoDB and Amazon Bedrock access (Claude Sonnet EU inference profile enabled)
+-   AWS Account with DynamoDB and Amazon Bedrock access (Claude Haiku 5.5 EU cross-region inference profile enabled)
 
 ## Installation
 

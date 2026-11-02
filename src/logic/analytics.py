@@ -24,6 +24,8 @@ def process_readings(readings: list[MeterReading]) -> pd.DataFrame:
     
     return df
 
+MIN_COVERED_DAYS_PER_MONTH = 20
+
 def calculate_monthly_consumption(readings: list[MeterReading], eval_mode: str = 'difference') -> pd.DataFrame:
     if not readings:
         return pd.DataFrame()
@@ -55,6 +57,7 @@ def calculate_monthly_consumption(readings: list[MeterReading], eval_mode: str =
              return pd.DataFrame(columns=['date', 'consumption', 'month_str'])
              
         daily_series = pd.Series(0.0, index=daily_idx)
+        covered_series = pd.Series(False, index=daily_idx)
         
         for _, row in df.iterrows():
             if pd.isna(row['prev_date']):
@@ -70,9 +73,16 @@ def calculate_monthly_consumption(readings: list[MeterReading], eval_mode: str =
             # Assign rate to days > start_date and <= end_date
             mask = (daily_series.index > start_date) & (daily_series.index <= end_date)
             daily_series.loc[mask] = daily_rate
+            covered_series.loc[mask] = True
             
-        # Resample to Month End and take SUM
+        # Resample to Month End: take SUM of consumption and count of covered days
         monthly = daily_series.resample('ME').sum()
+        covered_days = covered_series.resample('ME').sum()
+        # Only include months with at least MIN_COVERED_DAYS_PER_MONTH (20) covered days
+        monthly = monthly[covered_days >= MIN_COVERED_DAYS_PER_MONTH]
+
+    if monthly.empty:
+        return pd.DataFrame(columns=['date', 'consumption', 'month_str'])
     
     # Format for chart
     result = monthly.reset_index()
@@ -99,6 +109,20 @@ def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFram
     
     # Get intervals for accurate daily avg calculation
     intervals_df = process_readings(readings)
+    if not intervals_df.empty:
+        min_d = intervals_df['reading_date'].min()
+        max_d = intervals_df['reading_date'].max()
+        daily_idx = pd.date_range(start=min_d, end=max_d, freq='D')
+        covered_series = pd.Series(False, index=daily_idx)
+        for _, row in intervals_df.iterrows():
+            if pd.isna(row['prev_date']) or pd.isna(row['daily_avg']):
+                continue
+            mask = (covered_series.index > row['prev_date']) & (covered_series.index <= row['reading_date'])
+            covered_series.loc[mask] = True
+        monthly_covered_days = covered_series.resample('ME').sum()
+        covered_by_month = {dt.strftime('%Y-%m'): int(days) for dt, days in monthly_covered_days.items()}
+    else:
+        covered_by_month = {}
     
     stats = []
     # Sort years descending
@@ -136,35 +160,10 @@ def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFram
         active_months = len(year_monthly[year_monthly['consumption'] > 0])
         avg_monthly = total_consumption / active_months if active_months > 0 else 0
         
-        # Avg Daily - calculate active days allocated to this year
-        active_days = 0
-        year_start = pd.Timestamp(year=year, month=1, day=1)
-        year_end = pd.Timestamp(year=year, month=12, day=31)
-        year_start_limit = year_start - pd.Timedelta(days=1)
-        
-        if not intervals_df.empty:
-            for _, row in intervals_df.iterrows():
-                if pd.isna(row['prev_date']):
-                    continue
-                
-                # Interval: (prev_date, reading_date]
-                p_date = row['prev_date']
-                r_date = row['reading_date']
-                
-                # Check for overlap
-                if r_date <= year_start_limit or p_date >= year_end:
-                    continue
-                
-                # Calculate overlap
-                eff_start = max(p_date, year_start_limit)
-                eff_end = min(r_date, year_end)
-                
-                days = (eff_end - eff_start).days
-                if days > 0:
-                    active_days += days
-        
+        # Avg Daily - sum the covered days of the included months so numerator & denominator match
+        active_days = sum(covered_by_month.get(m_str, 0) for m_str in year_monthly['month_str'])
         if active_days == 0:
-             active_days = 1 # Avoid division by zero
+            active_days = 1  # Avoid division by zero
         
         avg_daily = total_consumption / active_days if active_days > 0 else 0
         

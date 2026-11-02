@@ -166,7 +166,7 @@ Verfolge monatliche Daten, die dir wichtig sind:
 
         # AI Pages
         "🤖 Talk to your Data": "🤖 Sprich mit deinen Daten",
-        "Analyze your monthly data with AI support (Powered by AWS Bedrock / Claude Sonnet)": "Analysiere deine monatlichen Daten mit KI-Unterstützung (Powered by AWS Bedrock / Claude Sonnet)",
+        "Analyze your monthly data with AI support (Powered by AWS Bedrock / Claude Haiku 5.5)": "Analysiere deine monatlichen Daten mit KI-Unterstützung (Powered by AWS Bedrock / Claude Haiku 5.5)",
         "Monthly Quota: {}/{} requests": "Monats-Quota: {}/{} Anfragen",
         "You have reached your monthly limit of {} requests. Come back next month!": "Du hast dein monatliches Limit von {} Anfragen erreicht. Komm nächsten Monat wieder!",
         "🗑️ Start new chat": "🗑️ Neuen Chat beginnen",
