@@ -13,12 +13,16 @@ import os
 # Page config must be the first Streamlit command
 st.set_page_config(page_title="Monthly Data Bot", layout="wide", page_icon="📊")
 
+@st.cache_resource
+def get_db() -> DBHandler:
+    return DBHandler()
+
 def main():
     # Initialize language
     if 'language' not in st.session_state:
         st.session_state.language = 'en'
 
-    db = DBHandler()
+    db = get_db()
     
     user = auth_flow(db)
     
@@ -68,12 +72,12 @@ def main():
                 st.session_state.language = selected_lang
                 st.rerun()
 
-            if st.button("⚙️ Define Data Categories", width="stretch", type="primary" if st.session_state.current_page == "Define Data Categories" else "secondary"):
+            if st.button(f"⚙️ {t('Define Data Categories')}", width="stretch", type="primary" if st.session_state.current_page == "Define Data Categories" else "secondary"):
                 st.session_state.current_page = "Define Data Categories"
                 st.rerun()
             
             st.divider()
-            if st.button("Logout"):
+            if st.button(t("Logout")):
                 del st.session_state['user']
                 st.rerun()
         

@@ -6,11 +6,11 @@ from src.logic.llm_client import LLMClient
 from src.logic.analytics import calculate_monthly_consumption
 from src.ui.i18n import t
 
-QUOTA_LIMIT = 50  # Hard limit per user per month
+QUOTA_LIMIT = 20  # Hard limit per user per month
 
 def ai_analytics_page(db: DBHandler, user: User):
     st.header(t("🤖 Talk to your Data"))
-    st.caption(t("Analyze your monthly data with AI support (Powered by AWS Bedrock / Claude 3.5 Sonnet)"))
+    st.caption(t("Analyze your monthly data with AI support (Powered by AWS Bedrock / Claude Sonnet)"))
 
     # --- Quota Check ---
     current_month_str = datetime.now().strftime("%Y-%m")
@@ -67,8 +67,9 @@ def ai_analytics_page(db: DBHandler, user: User):
             
             try:
                 # 1. Fetch Data
-                # We fetch fresh data every time to ensure accuracy
-                meter_types = db.get_meter_types(user.user_id)
+                metadata = db.get_user_metadata(user.user_id)
+                meter_types = metadata['meter_types']
+                configs = metadata['configs']
                 data_summary = {}
                 
                 if not meter_types:
@@ -79,8 +80,9 @@ def ai_analytics_page(db: DBHandler, user: User):
                         if not readings:
                             continue
 
-                        unit = db.get_meter_config(user.user_id, mt, 'unit') or "Units"
-                        eval_mode = db.get_meter_config(user.user_id, mt, 'eval_mode') or 'difference'
+                        m_cfg = configs.get(mt, {})
+                        unit = m_cfg.get('unit') or "Units"
+                        eval_mode = m_cfg.get('eval_mode') or 'difference'
                         
                         # Calculate monthly stats to give LLM the processed "intelligence"
                         monthly_df = calculate_monthly_consumption(readings, eval_mode)
@@ -100,20 +102,16 @@ def ai_analytics_page(db: DBHandler, user: User):
                     context_data = st.session_state.llm_client.format_readings(data_summary)
                     
                     # 3. Call LLM with History
-                    # We pass the full session history (excluding the first greeting if role is assistant and it was hardcoded, 
-                    # but here we just pass everything. The LLM handles role 'assistant' correctly as past context.)
                     response_text = st.session_state.llm_client.query(st.session_state.messages, context_data)
                     
                     # 4. Update Quota
-                    if "Es ist ein Fehler" not in response_text and "Zugriff verweigert" not in response_text:
-                        if user.quota_month != current_month_str:
-                            db.reset_ai_quota(user.username, current_month_str)
-                            # Update local session object immediately
-                            user.quota_month = current_month_str
-                            user.ai_quota_used = 1
-                        else:
-                            db.increment_ai_quota(user.username, current_month_str)
-                            user.ai_quota_used += 1
+                    if user.quota_month != current_month_str:
+                        db.reset_ai_quota(user.username, current_month_str)
+                        user.quota_month = current_month_str
+                        user.ai_quota_used = 1
+                    else:
+                        db.increment_ai_quota(user.username, current_month_str)
+                        user.ai_quota_used += 1
 
                 # Show result
                 message_placeholder.markdown(response_text)

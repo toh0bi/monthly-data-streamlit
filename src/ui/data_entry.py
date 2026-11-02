@@ -85,11 +85,13 @@ def data_entry_page(db: DBHandler, user: User):
                 )
                 
                 # Handle deletion of selected rows
-                if len(event.selection.rows) > 0:
-                    st.caption(t("{} readings selected", len(event.selection.rows)))
+                selection = event.get("selection")
+                selected_rows = selection.get("rows", []) if selection else []
+                if len(selected_rows) > 0:
+                    st.caption(t("{} readings selected", len(selected_rows)))
                     if st.button(t("🗑️ Delete Selected"), key=f"del_btn_{selected_type}", type="primary"):
                         # Get data to delete using iloc with the selected indices
-                        rows_to_delete = df.iloc[event.selection.rows]
+                        rows_to_delete = df.iloc[selected_rows]
                         
                         for _, row in rows_to_delete.iterrows():
                             db.delete_reading(user.user_id, row['meter_type'], row['reading_date'])

@@ -1,14 +1,31 @@
 import streamlit as st
 import json
 import pandas as pd
+from datetime import datetime
 from src.data.db_handler import DBHandler
 from src.data.models import User, MeterReading
 from src.logic.llm_client import LLMClient
+from src.ui.ai_analytics import QUOTA_LIMIT
 from src.ui.i18n import t
 
 def ai_data_entry_page(db: DBHandler, user: User):
     st.header(t("🤖 AI Data Import"))
     st.caption(t("Paste chaotic data simply via Copy & Paste. The AI structures it for you."))
+
+    # --- Quota Check ---
+    current_month_str = datetime.now().strftime("%Y-%m")
+    if user.quota_month != current_month_str:
+        user_quota_used = 0
+    else:
+        user_quota_used = user.ai_quota_used
+
+    st.progress(min(user_quota_used / QUOTA_LIMIT, 1.0),
+                text=t("Monthly Quota: {}/{} requests", user_quota_used, QUOTA_LIMIT))
+
+    if user_quota_used >= QUOTA_LIMIT:
+        st.error(t("You have reached your monthly limit of {} requests. Come back next month!", QUOTA_LIMIT))
+        return
+    # -------------------
 
     # Initialize LLM
     if "llm_client" not in st.session_state:
@@ -55,6 +72,14 @@ def ai_data_entry_page(db: DBHandler, user: User):
                     elif not data:
                         st.error(t("Could not find valid data."))
                     else:
+                        if user.quota_month != current_month_str:
+                            db.reset_ai_quota(user.username, current_month_str)
+                            user.quota_month = current_month_str
+                            user.ai_quota_used = 1
+                        else:
+                            db.increment_ai_quota(user.username, current_month_str)
+                            user.ai_quota_used += 1
+
                         st.session_state.import_preview_data = data
                         st.success(t("{} records found!", len(data)))
                         
@@ -74,23 +99,39 @@ def ai_data_entry_page(db: DBHandler, user: User):
         with col1:
              if st.button(t("💾 Save All"), type="primary"):
                 saved_count = 0
+                current_types = db.get_meter_types(user.user_id)
+                types_updated = False
+
                 for _, row in edited_df.iterrows():
-                    # Create Reading Object
                     try:
+                        m_type = str(row.get('meter_type', '')).strip()
+                        val_raw = row.get('value')
+                        date_raw = str(row.get('date', '')).strip()
+
+                        if not m_type or val_raw is None or pd.isna(val_raw) or not date_raw:
+                            continue
+
+                        # Validate ISO date format
+                        parsed_date = datetime.strptime(date_raw, "%Y-%m-%d").strftime("%Y-%m-%d")
+
                         reading = MeterReading(
-                            meter_type=str(row['meter_type']),
-                            meter_reading=float(row['value']),
-                            reading_date=str(row['date'])
+                            meter_type=m_type,
+                            meter_reading=float(val_raw),
+                            reading_date=parsed_date
                         )
-                        # Save to DB
                         if db.add_reading(user.user_id, reading):
                             saved_count += 1
+                            if m_type not in current_types:
+                                current_types.append(m_type)
+                                types_updated = True
                     except Exception as e:
-                        st.error(t("Error at row {}: {}", row, e))
+                        st.error(t("Error at row {}: {}", row.to_dict(), e))
                 
+                if types_updated:
+                    db.update_meter_types(user.user_id, current_types)
+
                 st.success(t("{} records successfully saved!", saved_count))
                 del st.session_state.import_preview_data # Clear
-                # Refresh meter types if new ones appeared (optional logic)
         
         with col2:
             if st.button(t("Cancel")):

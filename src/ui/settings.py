@@ -7,21 +7,20 @@ def settings_page(db: DBHandler, user: User):
     st.header(t("Define Data Categories"))
     st.caption(t("Here you can define what kind of data you want to track. This can be utility meters (electricity, water) or personal metrics (weight, rainfall, etc.)."))
     
+    metadata = db.get_user_metadata(user.user_id)
+    current_types = metadata['meter_types']
+    configs = metadata['configs']
+
     st.subheader(t("Add New Category"))
     
     # Tooltip for the mode
-    mode_help = """
-    **{}**: 
-    {}
+    mode_help = f"""
+    **{t("Counter / Accumulating")}**: 
+    {t("MODE_HELP_COUNTER")}
 
-    **{}**: 
-    {}
-    """.format(
-        t("Counter / Accumulating"),
-        t("Use this for meters that simply count up (like Electricity, Gas, Water meters). \nThe app will calculate the monthly usage by subtracting the previous month's value from the current reading.") if t("Counter / Accumulating") == "Counter / Accumulating" else "Verwende dies für Zähler, die einfach hochzählen (wie Strom, Gas, Wasser). \nDie App berechnet den monatlichen Verbrauch durch Subtraktion des Vormonatswertes.",
-        t("Direct Value / Measurement"),
-        t("Use this for data where the value itself is what you want to track for that month.\nExamples: Body Weight (kg), Rainfall (mm), Average Temperature (°C), Bank Account Balance (€).") if t("Direct Value / Measurement") == "Direct Value / Measurement" else "Verwende dies für Daten, bei denen der Wert selbst das Ziel ist.\nBeispiele: Körpergewicht (kg), Niederschlag (mm), Durchschnittstemperatur (°C), Kontostand (€)."
-    )
+    **{t("Direct Value / Measurement")}**: 
+    {t("MODE_HELP_DIRECT")}
+    """
 
     mode_options = {
         'difference': t('Counter / Accumulating (Calculates Difference)'), 
@@ -31,8 +30,8 @@ def settings_page(db: DBHandler, user: User):
     # Add new type with config
     with st.form("add_type_form"):
         col1, col2, col3 = st.columns(3)
-        new_type = col1.text_input(t("Name (e.g. 'Weight', 'Electricity')"))
-        new_unit = col2.text_input(t("Unit (e.g. 'kg', 'kWh')"))
+        new_type = col1.text_input(t("Name (e.g. 'Weight', 'Electricity')")).strip()
+        new_unit = col2.text_input(t("Unit (e.g. 'kg', 'kWh')")).strip()
         
         new_mode_display = col3.selectbox(
             t("Type"), 
@@ -42,7 +41,6 @@ def settings_page(db: DBHandler, user: User):
         new_mode = [k for k, v in mode_options.items() if v == new_mode_display][0]
         
         if st.form_submit_button(t("Add Category")):
-            current_types = db.get_meter_types(user.user_id)
             if new_type and new_type not in current_types:
                 # Add to list
                 current_types.append(new_type)
@@ -62,14 +60,12 @@ def settings_page(db: DBHandler, user: User):
     st.divider()
     st.subheader(t("Manage Existing Categories"))
     
-    current_types = db.get_meter_types(user.user_id)
-    
     for i, m_type in enumerate(current_types):
         if m_type == 'none': continue
         
         with st.expander(f"**{m_type}**", expanded=False):
             # 1. Reordering Controls
-            c_up, c_down, c_fill = st.columns([1, 1, 2])
+            c_up, c_down, _ = st.columns([1, 1, 2])
             with c_up:
                 if i > 0:
                     if st.button(t("⬆️ Up"), key=f"up_{m_type}", use_container_width=True):
@@ -88,18 +84,13 @@ def settings_page(db: DBHandler, user: User):
             # 2. Configuration
             col1, col2 = st.columns(2)
             
+            m_cfg = configs.get(m_type, {})
             # Unit
-            current_unit = db.get_meter_config(user.user_id, m_type, 'unit') or ''
-            new_unit = col1.text_input(t("Unit"), value=current_unit, key=f"unit_{m_type}")
+            current_unit = m_cfg.get('unit') or ''
+            new_unit = col1.text_input(t("Unit"), value=current_unit, key=f"unit_{m_type}").strip()
             
             # Evaluation Mode
-            current_mode = db.get_meter_config(user.user_id, m_type, 'eval_mode') or 'difference'
-            
-            # Re-using the options defined above for consistency
-            mode_options = {
-                'difference': t('Counter / Accumulating (Calculates Difference)'), 
-                'absolute': t('Direct Value (Takes Value as is)')
-            }
+            current_mode = m_cfg.get('eval_mode') or 'difference'
             display_options = list(mode_options.values())
             
             # Get current display value safely
@@ -118,11 +109,12 @@ def settings_page(db: DBHandler, user: User):
                 db.update_meter_config(user.user_id, m_type, 'unit', new_unit)
                 db.update_meter_config(user.user_id, m_type, 'eval_mode', new_mode)
                 st.success(t("Saved"))
+                st.rerun()
                 
             # Delete Type
             if col2.button(t("Delete {}", m_type), type="primary", key=f"del_{m_type}"):
                 current_types.remove(m_type)
-                db.update_meter_types(user.user_id, current_types)
+                db.delete_meter_category(user.user_id, m_type, current_types)
                 st.warning(t("Deleted {}", m_type))
                 st.rerun()
 

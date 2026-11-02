@@ -5,15 +5,17 @@ A Streamlit application for tracking and visualizing monthly meter readings (e.g
 ## Features
 
 -   **User Authentication:** Secure login and registration using bcrypt.
--   **Dashboard:** Visualize consumption trends over time.
--   **Data Entry:** Easy-to-use form for inputting new meter readings.
--   **Meter Management:** Define and customize different types of meters.
+-   **Dashboard:** Visualize consumption and direct measurement trends over time (Year-over-Year & Linear Trend with regression).
+-   **Data Entry:** Easy-to-use form for inputting and managing readings, including CSV export.
+-   **AI Data Import:** Extract structured readings from unstructured text or photos/scans via AWS Bedrock.
+-   **AI Analysis:** Interactive chat to analyze your monthly data (with monthly per-user request quotas).
+-   **Meter Management:** Define, reorder, and customize different types of meters (`difference` vs. `absolute` evaluation modes).
 -   **Cloud Storage:** Uses AWS DynamoDB for reliable data persistence.
 
 ## Prerequisites
 
 -   Python 3.9+
--   AWS Account with DynamoDB access
+-   AWS Account with DynamoDB and Amazon Bedrock access (Claude Sonnet EU inference profile enabled)
 
 ## Installation
 

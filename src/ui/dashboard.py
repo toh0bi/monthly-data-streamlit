@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 import altair as alt
 from src.data.db_handler import DBHandler
 from src.data.models import User
@@ -8,7 +9,10 @@ from src.ui.i18n import t
 def dashboard_page(db: DBHandler, user: User):
     st.header(t("Dashboard"))
     
-    meter_types = db.get_meter_types(user.user_id)
+    metadata = db.get_user_metadata(user.user_id)
+    meter_types = metadata['meter_types']
+    configs = metadata['configs']
+
     if not meter_types:
         st.warning(t("No data."))
         return
@@ -23,9 +27,10 @@ def dashboard_page(db: DBHandler, user: User):
                 st.info(t("No readings."))
                 continue
             
-            # Get config
-            eval_mode = db.get_meter_config(user.user_id, m_type, 'eval_mode') or 'difference'
-            unit = db.get_meter_config(user.user_id, m_type, 'unit') or "Units"
+            # Get config from prefetched metadata
+            m_cfg = configs.get(m_type, {})
+            eval_mode = m_cfg.get('eval_mode') or 'difference'
+            unit = m_cfg.get('unit') or "Units"
             
             monthly_df = calculate_monthly_consumption(readings, eval_mode)
             
@@ -47,11 +52,11 @@ def dashboard_page(db: DBHandler, user: User):
                     key=f"year_slider_{m_type}"
                 )
             
-            # Filter monthly_df based on selection
-            monthly_df = monthly_df[
+            # Filter monthly_df based on selection (use .copy() to avoid SettingWithCopyWarning)
+            monthly_df = pd.DataFrame(monthly_df[
                 (monthly_df['year'] >= selected_years[0]) & 
                 (monthly_df['year'] <= selected_years[1])
-            ]
+            ]).copy()
             
             if monthly_df.empty:
                 st.info(t("No data in selected range."))
@@ -78,7 +83,6 @@ def dashboard_page(db: DBHandler, user: User):
             monthly_df['month_name'] = monthly_df['month_name'].apply(lambda x: t(x))
             # Tooltip Date Format
             monthly_df['month_str_pretty'] = monthly_df['date'].dt.strftime('%b %Y') # Still English here if locale is EN
-            # We could assume 'month_str' is YYYY-MM which is universal enough
             
             if view_mode == "Year-over-Year":
                 # We want X=Month (Jan, Feb...), Y=Consumption, Color=Year
@@ -90,7 +94,7 @@ def dashboard_page(db: DBHandler, user: User):
                     tooltip=[alt.Tooltip('year', title=t('Year')), alt.Tooltip('month_name', title=t('Month')), alt.Tooltip('consumption', title=t(value_label))]
                 ).interactive()
                 
-                st.altair_chart(line_chart, width="stretch")
+                st.altair_chart(line_chart, use_container_width=True)
                 
             else:
                 # Linear Trend with Regression
@@ -111,15 +115,15 @@ def dashboard_page(db: DBHandler, user: User):
                     strokeWidth=2
                 )
                 
-                st.altair_chart((line + trend).interactive(), width="stretch")
+                st.altair_chart((line + trend).interactive(), use_container_width=True)
             
             # --- 2. Yearly Stats ---
             st.subheader(t("Yearly Statistics"))
-            stats_df = calculate_yearly_stats(readings, monthly_df)
+            stats_df = calculate_yearly_stats(readings, monthly_df, eval_mode)
             
             if not stats_df.empty:
                 # Apply filter to stats as well
-                stats_df = stats_df[
+                stats_df = stats_df.loc[
                     (stats_df['year'] >= selected_years[0]) & 
                     (stats_df['year'] <= selected_years[1])
                 ]
@@ -127,12 +131,21 @@ def dashboard_page(db: DBHandler, user: User):
                 for _, row in stats_df.iterrows():
                     year = int(row['year'])
                     with st.expander(t("Year {}", year), expanded=False):
-                        # Use 2x2 grid for better mobile responsiveness
-                        c1, c2 = st.columns(2)
-                        c1.metric(t("Data Points"), int(row['data_points']))
-                        c2.metric(t("Total"), f"{row['total_consumption']:.1f} {unit}")
-                        
-                        c3, c4 = st.columns(2)
-                        c3.metric(t("Avg Monthly"), f"{row['avg_monthly']:.1f} {unit}")
-                        c4.metric(t("Avg Daily"), f"{row['avg_daily']:.1f} {unit}")
+                        if eval_mode == 'absolute':
+                            c1, c2 = st.columns(2)
+                            c1.metric(t("Data Points"), int(row['data_points']))
+                            c2.metric(t("Avg Monthly"), f"{row['avg_monthly']:.1f} {unit}")
+                            
+                            c3, c4 = st.columns(2)
+                            c3.metric(t("Min"), f"{row['min_value']:.1f} {unit}")
+                            c4.metric(t("Max"), f"{row['max_value']:.1f} {unit}")
+                        else:
+                            # Use 2x2 grid for better mobile responsiveness
+                            c1, c2 = st.columns(2)
+                            c1.metric(t("Data Points"), int(row['data_points']))
+                            c2.metric(t("Total"), f"{row['total_consumption']:.1f} {unit}")
+                            
+                            c3, c4 = st.columns(2)
+                            c3.metric(t("Avg Monthly"), f"{row['avg_monthly']:.1f} {unit}")
+                            c4.metric(t("Avg Daily"), f"{row['avg_daily']:.1f} {unit}")
 

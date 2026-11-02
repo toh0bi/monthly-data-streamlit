@@ -1,6 +1,4 @@
 from dataclasses import dataclass
-from datetime import date, datetime
-from typing import Optional
 
 @dataclass
 class MeterReading:
@@ -18,9 +16,8 @@ class MeterReading:
     @staticmethod
     def from_dynamo_item(item: dict, user_id: str) -> 'MeterReading':
         # chat_id_and_type is like "12345_electricity"
-        # we might not need to parse it if we already know the type, but let's be safe
         full_key = item.get('chat_id_and_type', {}).get('S', '')
-        meter_type = full_key.replace(f'{user_id}_', '')
+        meter_type = full_key.removeprefix(f'{user_id}_')
         
         return MeterReading(
             meter_type=meter_type,

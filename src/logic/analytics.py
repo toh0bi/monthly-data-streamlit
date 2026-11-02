@@ -7,7 +7,8 @@ def process_readings(readings: list[MeterReading]) -> pd.DataFrame:
     
     df = pd.DataFrame([r.__dict__ for r in readings])
     df['reading_date'] = pd.to_datetime(df['reading_date'])
-    df = df.sort_values('reading_date')
+    # Deduplicate same-day readings (keep latest entry) and sort chronologically
+    df = df.sort_values('reading_date').drop_duplicates(subset=['reading_date'], keep='last').reset_index(drop=True)
     
     # Calculate consumption
     df['prev_date'] = df['reading_date'].shift(1)
@@ -19,7 +20,7 @@ def process_readings(readings: list[MeterReading]) -> pd.DataFrame:
     mask_reset = df['reading_diff'] < 0
     df.loc[mask_reset, 'reading_diff'] = 0 
     
-    df['daily_avg'] = df['reading_diff'] / df['days_diff']
+    df['daily_avg'] = df['reading_diff'] / df['days_diff'].replace(0, pd.NA)
     
     return df
 
@@ -87,7 +88,7 @@ def calculate_monthly_consumption(readings: list[MeterReading], eval_mode: str =
     
     return result
 
-def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFrame) -> pd.DataFrame:
+def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFrame, eval_mode: str = 'difference') -> pd.DataFrame:
     if not readings or monthly_df.empty:
         return pd.DataFrame()
 
@@ -101,15 +102,34 @@ def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFram
     
     stats = []
     # Sort years descending
-    years = sorted(readings_df['year'].unique(), reverse=True)
+    years = sorted(monthly_df['year'].unique(), reverse=True)
     
     for year in years:
         # Filter readings for this year
         year_readings = readings_df[readings_df['year'] == year]
         data_points = len(year_readings)
         
-        # Filter monthly consumption for this year
+        # Filter monthly values for this year
         year_monthly = monthly_df[monthly_df['year'] == year]
+        if year_monthly.empty:
+            continue
+
+        if eval_mode == 'absolute':
+            # For direct measurements (e.g., weight, temperature), compute mean/min/max instead of sum
+            avg_monthly = float(year_monthly['consumption'].mean())
+            min_val = float(year_readings['meter_reading'].min()) if not year_readings.empty else float(year_monthly['consumption'].min())
+            max_val = float(year_readings['meter_reading'].max()) if not year_readings.empty else float(year_monthly['consumption'].max())
+            stats.append({
+                'year': year,
+                'data_points': data_points,
+                'total_consumption': avg_monthly,
+                'avg_monthly': avg_monthly,
+                'avg_daily': avg_monthly,
+                'min_value': min_val,
+                'max_value': max_val
+            })
+            continue
+
         total_consumption = year_monthly['consumption'].sum()
         
         # Avg Monthly
@@ -120,10 +140,6 @@ def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFram
         active_days = 0
         year_start = pd.Timestamp(year=year, month=1, day=1)
         year_end = pd.Timestamp(year=year, month=12, day=31)
-        # We start counting from (year_start - 1 day) effectively for the interval logic
-        # Interval (D0, D1]. Days = D1 - D0.
-        # Intersect with [Jan 1, Dec 31].
-        # Is equivalent to Intersect (D0, D1] with (Dec 31 Prev, Dec 31 Curr].
         year_start_limit = year_start - pd.Timedelta(days=1)
         
         if not intervals_df.empty:
@@ -157,7 +173,9 @@ def calculate_yearly_stats(readings: list[MeterReading], monthly_df: pd.DataFram
             'data_points': data_points,
             'total_consumption': total_consumption,
             'avg_monthly': avg_monthly,
-            'avg_daily': avg_daily
+            'avg_daily': avg_daily,
+            'min_value': float(year_monthly['consumption'].min()),
+            'max_value': float(year_monthly['consumption'].max())
         })
         
     return pd.DataFrame(stats)

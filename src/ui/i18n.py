@@ -22,7 +22,9 @@ Keep track of any monthly data you care about:
 
 👈 **Please log in or register in the sidebar to continue.**
 """,
-        "CHAT_GREETING": "Hello! I have access to your monthly data. Ask me about trends, comparisons or details – for example 'How was my electricity consumption in 2023?', 'Analyze my weight trend' or 'Is it raining more this year than last year?'."
+        "CHAT_GREETING": "Hello! I have access to your monthly data. Ask me about trends, comparisons or details – for example 'How was my electricity consumption in 2023?', 'Analyze my weight trend' or 'Is it raining more this year than last year?'.",
+        "MODE_HELP_COUNTER": "Use this for meters that simply count up (like Electricity, Gas, Water meters).\nThe app will calculate the monthly usage by subtracting the previous month's value from the current reading.",
+        "MODE_HELP_DIRECT": "Use this for data where the value itself is what you want to track for that month.\nExamples: Body Weight (kg), Rainfall (mm), Average Temperature (°C), Bank Account Balance (€)."
     },
     "de": {
         # Special Keys
@@ -64,7 +66,14 @@ Verfolge monatliche Daten, die dir wichtig sind:
         "Invalid username or password": "Ungültiger Benutzername oder Passwort",
         "Passwords do not match": "Passwörter stimmen nicht überein",
         "Username already exists": "Benutzername existiert bereits",
+        "Username must be at least 3 characters long": "Benutzername muss mindestens 3 Zeichen lang sein",
+        "Password must be at least 6 characters long": "Passwort muss mindestens 6 Zeichen lang sein",
         "Legacy Chat ID (Optional)": "Alte Chat-ID (Optional, falls du Daten migrieren willst)",
+        "Enter your numeric Telegram Chat ID to migrate your existing bot data. Each Chat ID can only be claimed once.": "Gib deine numerische Telegram-Chat-ID ein, um deine bestehenden Bot-Daten zu übernehmen. Jede Chat-ID kann nur einmal verknüpft werden.",
+        "Invalid Legacy Chat ID format.": "Ungültiges Format für die alte Chat-ID (nur Zahlen erlaubt).",
+        "This Legacy Chat ID is not authorized for migration.": "Diese Chat-ID ist nicht für die Migration freigegeben.",
+        "Legacy Chat ID not found.": "Alte Chat-ID wurde nicht gefunden.",
+        "This Legacy Chat ID is already linked to an account.": "Diese Chat-ID ist bereits mit einem Konto verknüpft.",
         "Registration successful! Please login.": "Registrierung erfolgreich! Bitte anmelden.",
         "Registration failed. Please try again.": "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
         "Welcome to Monthly Data Bot 📊": "Willkommen beim Monatsdaten Bot 📊",
@@ -95,6 +104,8 @@ Verfolge monatliche Daten, die dir wichtig sind:
         "Year {}": "Jahr {}",
         "Data Points": "Datensätze",
         "Total": "Gesamt",
+        "Min": "Min",
+        "Max": "Max",
         "Avg Monthly": "Ø Monatlich",
         "Avg Daily": "Ø Täglich",
         # Months
@@ -131,6 +142,8 @@ Verfolge monatliche Daten, die dir wichtig sind:
         "Add New Category": "Neue Kategorie hinzufügen",
         "Counter / Accumulating": "Zähler / Akkumulierend",
         "Counter / Accumulating (Calculates Difference)": "Zähler / Akkumulierend (Berechnet Differenz)",
+        "MODE_HELP_COUNTER": "Verwende dies für Zähler, die einfach hochzählen (wie Strom, Gas, Wasser).\nDie App berechnet den monatlichen Verbrauch durch Subtraktion des Vormonatswertes.",
+        "MODE_HELP_DIRECT": "Verwende dies für Daten, bei denen der Wert selbst das Ziel ist.\nBeispiele: Körpergewicht (kg), Niederschlag (mm), Durchschnittstemperatur (°C), Kontostand (€).",
         "Direct Value / Measurement": "Direkter Wert / Messung",
         "Direct Value (Takes Value as is)": "Direkter Wert (Nimmt Wert wie er ist)",
         "Name (e.g. 'Weight', 'Electricity')": "Name (z.B. 'Gewicht', 'Strom')",
@@ -153,7 +166,7 @@ Verfolge monatliche Daten, die dir wichtig sind:
 
         # AI Pages
         "🤖 Talk to your Data": "🤖 Sprich mit deinen Daten",
-        "Analyze your monthly data with AI support (Powered by AWS Bedrock / Claude 3.5 Sonnet)": "Analysiere deine monatlichen Daten mit KI-Unterstützung (Powered by AWS Bedrock / Claude 3.5 Sonnet)",
+        "Analyze your monthly data with AI support (Powered by AWS Bedrock / Claude Sonnet)": "Analysiere deine monatlichen Daten mit KI-Unterstützung (Powered by AWS Bedrock / Claude Sonnet)",
         "Monthly Quota: {}/{} requests": "Monats-Quota: {}/{} Anfragen",
         "You have reached your monthly limit of {} requests. Come back next month!": "Du hast dein monatliches Limit von {} Anfragen erreicht. Komm nächsten Monat wieder!",
         "🗑️ Start new chat": "🗑️ Neuen Chat beginnen",

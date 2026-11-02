@@ -1,8 +1,7 @@
 import boto3
-from boto3.dynamodb.conditions import Key
-import os
 import streamlit as st
-from typing import List, Optional
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 from .models import MeterReading, User
 
 class DBHandler:
@@ -52,6 +51,35 @@ class DBHandler:
             print(f"Error creating user: {e}")
             return False
 
+    def is_user_id_claimed(self, user_id: str) -> bool:
+        """Checks if a user_id (e.g. a legacy Telegram chat_id) is already linked to an existing user account."""
+        try:
+            response = self.dynamo.scan(
+                TableName=self.USER_TABLE_NAME,
+                FilterExpression="user_id = :uid",
+                ExpressionAttributeValues={':uid': {'S': str(user_id)}},
+                ProjectionExpression="username"
+            )
+            return len(response.get('Items', [])) > 0
+        except Exception as e:
+            print(f"Error checking user_id claim: {e}")
+            return True  # Fail closed for safety
+
+    def legacy_chat_id_exists(self, chat_id: str) -> bool:
+        """Checks if a legacy Telegram chat_id actually has a metadata entry in the main table."""
+        try:
+            response = self.dynamo.get_item(
+                TableName=self.TABLE_NAME,
+                Key={
+                    self.HASHKEY: {'S': str(chat_id)},
+                    self.RANGEKEY: {'S': 'metadata'}
+                }
+            )
+            return 'Item' in response
+        except Exception as e:
+            print(f"Error checking legacy chat_id: {e}")
+            return False
+
     def increment_ai_quota(self, username: str, quota_month: str) -> bool:
         try:
             # Atomic counter update
@@ -91,7 +119,6 @@ class DBHandler:
 
     def update_user_stats(self, username: str) -> bool:
         try:
-            from datetime import datetime
             today = datetime.now().strftime('%Y-%m-%d')
             
             self.dynamo.update_item(
@@ -110,21 +137,23 @@ class DBHandler:
 
     # --- Meter Readings ---
     def get_readings(self, user_id: str, meter_type: str) -> List[MeterReading]:
-        key_condition = Key(self.HASHKEY).eq(f'{user_id}_{meter_type}')
-        
-        # We need to use the Table resource for easier querying with Key objects, 
-        # or construct the low-level query. Let's use low-level for consistency with client.
         try:
-            response = self.dynamo.query(
-                TableName=self.TABLE_NAME,
-                KeyConditionExpression=f"{self.HASHKEY} = :pk",
-                ExpressionAttributeValues={
+            items = []
+            query_kwargs = {
+                'TableName': self.TABLE_NAME,
+                'KeyConditionExpression': f"{self.HASHKEY} = :pk",
+                'ExpressionAttributeValues': {
                     ':pk': {'S': f'{user_id}_{meter_type}'}
                 }
-            )
-            items = response.get('Items', [])
-            # Filter out metadata if any (though metadata usually has 'metadata' as range key)
-            # Our readings have dates as range key.
+            }
+            while True:
+                response = self.dynamo.query(**query_kwargs)
+                items.extend(response.get('Items', []))
+                last_key = response.get('LastEvaluatedKey')
+                if not last_key:
+                    break
+                query_kwargs['ExclusiveStartKey'] = last_key
+
             readings = []
             for item in items:
                 if item.get(self.RANGEKEY, {}).get('S') == 'metadata':
@@ -161,7 +190,8 @@ class DBHandler:
             return False
 
     # --- Metadata / Configuration ---
-    def get_meter_types(self, user_id: str) -> List[str]:
+    def get_user_metadata(self, user_id: str) -> Dict[str, Any]:
+        """Fetches the entire metadata item for a user in a single DynamoDB call."""
         try:
             response = self.dynamo.get_item(
                 TableName=self.TABLE_NAME,
@@ -170,19 +200,28 @@ class DBHandler:
                     self.RANGEKEY: {'S': 'metadata'}
                 }
             )
-            if 'Item' in response:
-                item = response['Item']
-                if 'meter_types' in item:
-                    # Handle List (L) - preserves order
-                    if 'L' in item['meter_types']:
-                        return [x['S'] for x in item['meter_types']['L']]
-                    # Handle Set (SS) - legacy fallback, sorted
-                    elif 'SS' in item['meter_types']:
-                        return sorted(item['meter_types']['SS'])
-            return []
+            item = response.get('Item', {})
+            meter_types: List[str] = []
+            if 'meter_types' in item:
+                if 'L' in item['meter_types']:
+                    meter_types = [x['S'] for x in item['meter_types']['L'] if 'S' in x]
+                elif 'SS' in item['meter_types']:
+                    meter_types = sorted(item['meter_types']['SS'])
+
+            configs: Dict[str, Dict[str, str]] = {}
+            for mt in meter_types:
+                configs[mt] = {
+                    'unit': item.get(f'unit_{mt}', {}).get('S', ''),
+                    'eval_mode': item.get(f'eval_mode_{mt}', {}).get('S', 'difference'),
+                    'title': item.get(f'title_{mt}', {}).get('S', '')
+                }
+            return {'meter_types': meter_types, 'configs': configs, 'raw': item}
         except Exception as e:
-            print(f"Error getting meter types: {e}")
-            return []
+            print(f"Error getting user metadata: {e}")
+            return {'meter_types': [], 'configs': {}, 'raw': {}}
+
+    def get_meter_types(self, user_id: str) -> List[str]:
+        return self.get_user_metadata(user_id)['meter_types']
 
     def update_meter_types(self, user_id: str, meter_types: List[str]) -> bool:
         # Convert to DynamoDB List format to preserve order
@@ -206,7 +245,7 @@ class DBHandler:
             return False
 
     def get_meter_config(self, user_id: str, meter_type: str, config_key: str) -> Optional[str]:
-        # config_key is 'unit' or 'title'
+        # config_key is 'unit', 'eval_mode', or 'title'
         # stored as unit_{meter_type} or title_{meter_type}
         full_key = f"{config_key}_{meter_type}"
         try:
@@ -244,4 +283,32 @@ class DBHandler:
             return True
         except Exception as e:
             print(f"Error updating config: {e}")
+            return False
+
+    def delete_meter_category(self, user_id: str, meter_type: str, remaining_types: List[str]) -> bool:
+        """Removes the category from metadata, cleans up its config keys, and deletes its readings."""
+        dynamo_list = [{'S': mt} for mt in remaining_types]
+        try:
+            self.dynamo.update_item(
+                TableName=self.TABLE_NAME,
+                Key={
+                    self.HASHKEY: {'S': str(user_id)},
+                    self.RANGEKEY: {'S': 'metadata'}
+                },
+                UpdateExpression="SET meter_types = :mt REMOVE #u, #em, #t",
+                ExpressionAttributeNames={
+                    '#u': f"unit_{meter_type}",
+                    '#em': f"eval_mode_{meter_type}",
+                    '#t': f"title_{meter_type}"
+                },
+                ExpressionAttributeValues={
+                    ':mt': {'L': dynamo_list}
+                }
+            )
+            readings = self.get_readings(user_id, meter_type)
+            for r in readings:
+                self.delete_reading(user_id, meter_type, r.reading_date)
+            return True
+        except Exception as e:
+            print(f"Error deleting meter category: {e}")
             return False
