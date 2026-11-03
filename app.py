@@ -26,72 +26,64 @@ def main():
     
     user = auth_flow(db)
     
-    if user:
-        # Initialize page state if not exists
-        if "current_page" not in st.session_state:
-            st.session_state.current_page = "Dashboard"
+    if not user:
+        return
 
-        with st.sidebar:
-            # Logo & Title
-            if os.path.exists("logo.png"):
-                st.image("logo.png", width="stretch")
-            
-            st.title(t("Monthly Data Bot"))
-            st.caption(f"{t('Logged in as')} **{user.username}**")
-            st.divider()
-            
-            # Navigation Buttons
-            if st.button(f"📊 {t('Dashboard')}", width="stretch", type="primary" if st.session_state.current_page == "Dashboard" else "secondary"):
-                st.session_state.current_page = "Dashboard"
-                st.rerun()
-                
-            if st.button(f"📝 {t('Data Entry')}", width="stretch", type="primary" if st.session_state.current_page == "Data Entry" else "secondary"):
-                st.session_state.current_page = "Data Entry"
-                st.rerun()
+    # Page wrappers (st.Page callables take no arguments)
+    def _data_entry():
+        data_entry_page(db, user)
 
-            if st.button(f"🤖 {t('AI Data Import')}", width="stretch", type="primary" if st.session_state.current_page == "AI Data Import" else "secondary"):
-                st.session_state.current_page = "AI Data Import"
-                st.rerun()
-                
-            if st.button(f"🤖 {t('AI Analysis')}", width="stretch", type="primary" if st.session_state.current_page == "AI Analysis" else "secondary"):
-                st.session_state.current_page = "AI Analysis"
-                st.rerun()
+    def _dashboard():
+        dashboard_page(db, user)
 
-            st.divider()
-            
-            # Language Selector
-            lang_options = {"en": "🇬🇧 English", "de": "🇩🇪 Deutsch"}
-            selected_lang = st.selectbox(
-                "Language / Sprache", 
-                options=list(lang_options.keys()), 
-                format_func=lambda x: lang_options[x],
-                index=0 if st.session_state.language == 'en' else 1
-            )
-            
-            if selected_lang != st.session_state.language:
-                st.session_state.language = selected_lang
-                st.rerun()
+    def _ai_import():
+        ai_data_entry_page(db, user)
 
-            if st.button(f"⚙️ {t('Define Data Series')}", width="stretch", type="primary" if st.session_state.current_page == "Define Data Series" else "secondary"):
-                st.session_state.current_page = "Define Data Series"
-                st.rerun()
-            
-            st.divider()
-            if st.button(t("Logout")):
-                del st.session_state['user']
-                st.rerun()
+    def _ai_analysis():
+        ai_analytics_page(db, user)
+
+    def _settings():
+        settings_page(db, user)
+
+    pages = [
+        st.Page(_data_entry, title=t("Data Entry"), icon="📝", url_path="data-entry", default=True),
+        st.Page(_dashboard, title=t("Dashboard"), icon="📊", url_path="dashboard"),
+        st.Page(_ai_import, title=t("AI Data Import"), icon="🤖", url_path="ai-import"),
+        st.Page(_ai_analysis, title=t("AI Analysis"), icon="🤖", url_path="ai-analysis"),
+        st.Page(_settings, title=t("Define Data Series"), icon="⚙️", url_path="settings"),
+    ]
+
+    # Top navigation: all pages reachable without opening the sidebar (mobile friendly)
+    nav = st.navigation(pages, position="top")
+
+    # Sidebar holds only optional extras (account info, language, logout)
+    with st.sidebar:
+        if os.path.exists("logo.png"):
+            st.image("logo.png", width="stretch")
         
-        # Routing
-        if st.session_state.current_page == "Dashboard":
-            dashboard_page(db, user)
-        elif st.session_state.current_page == "Data Entry":
-            data_entry_page(db, user)
-        elif st.session_state.current_page == "AI Data Import":
-            ai_data_entry_page(db, user)
-        elif st.session_state.current_page == "AI Analysis":
-            ai_analytics_page(db, user)
-        elif st.session_state.current_page in ("Define Data Series", "Define Data Categories"):
-            settings_page(db, user)
+        st.title(t("Monthly Data Bot"))
+        st.caption(f"{t('Logged in as')} **{user.username}**")
+        st.divider()
+        
+        # Language Selector
+        lang_options = {"en": "🇬🇧 English", "de": "🇩🇪 Deutsch"}
+        selected_lang = st.selectbox(
+            "Language / Sprache", 
+            options=list(lang_options.keys()), 
+            format_func=lambda x: lang_options[x],
+            index=0 if st.session_state.language == 'en' else 1
+        )
+        
+        if selected_lang != st.session_state.language:
+            st.session_state.language = selected_lang
+            st.rerun()
+
+        st.divider()
+        if st.button(t("Logout")):
+            del st.session_state['user']
+            st.rerun()
+
+    nav.run()
 
 if __name__ == "__main__":
     main()
