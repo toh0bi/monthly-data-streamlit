@@ -8,9 +8,14 @@ from datetime import date
 def data_entry_page(db: DBHandler, user: User):
     st.header(t("Data Entry"))
     
-    meter_types = db.get_meter_types(user.user_id)
+    metadata = db.get_user_metadata(user.user_id)
+    configs = metadata['configs']
+    meter_types = [
+        mt for mt in metadata['meter_types']
+        if configs.get(mt, {}).get('eval_mode') != 'formula'
+    ]
     if not meter_types:
-        st.warning(t("No meter types defined. Go to Settings to add one."))
+        st.warning(t("No data series defined. Go to Settings to add one."))
         return
 
     # Use Tabs for navigation

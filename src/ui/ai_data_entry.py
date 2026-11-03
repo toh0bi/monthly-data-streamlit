@@ -47,7 +47,12 @@ def ai_data_entry_page(db: DBHandler, user: User):
             st.warning(t("Please enter text or upload an image."))
         else:
             with st.spinner(t("Analyzing data...")):
-                meter_types = db.get_meter_types(user.user_id)
+                metadata = db.get_user_metadata(user.user_id)
+                configs = metadata['configs']
+                meter_types = [
+                    mt for mt in metadata['meter_types']
+                    if configs.get(mt, {}).get('eval_mode') != 'formula'
+                ]
                 
                 image_bytes = None
                 media_type = "image/jpeg"

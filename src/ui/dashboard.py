@@ -3,7 +3,11 @@ import pandas as pd
 import altair as alt
 from src.data.db_handler import DBHandler
 from src.data.models import User
-from src.logic.analytics import calculate_monthly_consumption, calculate_yearly_stats
+from src.logic.analytics import (
+    calculate_all_monthly_series,
+    calculate_yearly_stats,
+    calculate_formula_yearly_stats
+)
 from src.ui.i18n import t
 
 def dashboard_page(db: DBHandler, user: User):
@@ -16,23 +20,31 @@ def dashboard_page(db: DBHandler, user: User):
     if not meter_types:
         st.warning(t("No data."))
         return
+
+    all_monthly_dfs = calculate_all_monthly_series(db, user.user_id, meter_types, configs)
         
     # Tabs for each meter type
     tabs = st.tabs(meter_types)
     
     for i, m_type in enumerate(meter_types):
         with tabs[i]:
-            readings = db.get_readings(user.user_id, m_type)
-            if not readings:
-                st.info(t("No readings."))
-                continue
-            
             # Get config from prefetched metadata
             m_cfg = configs.get(m_type, {})
             eval_mode = m_cfg.get('eval_mode') or 'difference'
             unit = m_cfg.get('unit') or "Units"
-            
-            monthly_df = calculate_monthly_consumption(readings, eval_mode)
+            formula = m_cfg.get('formula') or ""
+
+            if eval_mode == 'formula':
+                if formula:
+                    st.caption(f"🧮 {t('Formula')}: `{formula}`")
+                readings = []
+                monthly_df = all_monthly_dfs.get(m_type, pd.DataFrame())
+            else:
+                readings = db.get_readings(user.user_id, m_type)
+                if not readings:
+                    st.info(t("No readings."))
+                    continue
+                monthly_df = all_monthly_dfs.get(m_type, pd.DataFrame())
             
             if monthly_df.empty:
                 st.info(t("Not enough data to calculate consumption."))
@@ -63,8 +75,8 @@ def dashboard_page(db: DBHandler, user: User):
                 continue
                 
             # Dynamic Title based on mode
-            # "Consumption" generalized to "Monthly Total" (for diffs) and "Value" (for absolute)
-            value_label = "Monthly Total" if eval_mode == 'difference' else "Value"
+            # "Consumption" generalized to "Monthly Total" (for diffs/formulas) and "Value" (for absolute)
+            value_label = "Value" if eval_mode == 'absolute' else "Monthly Total"
             
             # --- 1. Charts ---
             st.subheader(f"{t('Monthly')} {t(value_label)} ({unit})")
@@ -119,7 +131,10 @@ def dashboard_page(db: DBHandler, user: User):
             
             # --- 2. Yearly Stats ---
             st.subheader(t("Yearly Statistics"))
-            stats_df = calculate_yearly_stats(readings, monthly_df, eval_mode)
+            if eval_mode == 'formula':
+                stats_df = calculate_formula_yearly_stats(monthly_df)
+            else:
+                stats_df = calculate_yearly_stats(readings, monthly_df, eval_mode)
             
             if not stats_df.empty:
                 # Apply filter to stats as well

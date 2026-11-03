@@ -3,7 +3,7 @@ from datetime import datetime
 from src.data.db_handler import DBHandler
 from src.data.models import User
 from src.logic.llm_client import LLMClient
-from src.logic.analytics import calculate_monthly_consumption
+from src.logic.analytics import calculate_all_monthly_series
 from src.ui.i18n import t
 
 QUOTA_LIMIT = 20  # Hard limit per user per month
@@ -75,19 +75,14 @@ def ai_analytics_page(db: DBHandler, user: User):
                 if not meter_types:
                     response_text = t("Unfortunately, I cannot find any meter data in your profile. Please add data in the dashboard first.")
                 else:
+                    all_monthly_dfs = calculate_all_monthly_series(db, user.user_id, meter_types, configs)
                     for mt in meter_types:
-                        readings = db.get_readings(user.user_id, mt)
-                        if not readings:
-                            continue
-
                         m_cfg = configs.get(mt, {})
                         unit = m_cfg.get('unit') or "Units"
                         eval_mode = m_cfg.get('eval_mode') or 'difference'
+                        monthly_df = all_monthly_dfs.get(mt)
                         
-                        # Calculate monthly stats to give LLM the processed "intelligence"
-                        monthly_df = calculate_monthly_consumption(readings, eval_mode)
-                        
-                        if not monthly_df.empty:
+                        if monthly_df is not None and not monthly_df.empty:
                             data_summary[mt] = {
                                 "unit": unit,
                                 "mode": eval_mode,

@@ -213,7 +213,8 @@ class DBHandler:
                 configs[mt] = {
                     'unit': item.get(f'unit_{mt}', {}).get('S', ''),
                     'eval_mode': item.get(f'eval_mode_{mt}', {}).get('S', 'difference'),
-                    'title': item.get(f'title_{mt}', {}).get('S', '')
+                    'title': item.get(f'title_{mt}', {}).get('S', ''),
+                    'formula': item.get(f'formula_{mt}', {}).get('S', '')
                 }
             return {'meter_types': meter_types, 'configs': configs, 'raw': item}
         except Exception as e:
@@ -295,11 +296,12 @@ class DBHandler:
                     self.HASHKEY: {'S': str(user_id)},
                     self.RANGEKEY: {'S': 'metadata'}
                 },
-                UpdateExpression="SET meter_types = :mt REMOVE #u, #em, #t",
+                UpdateExpression="SET meter_types = :mt REMOVE #u, #em, #t, #f",
                 ExpressionAttributeNames={
                     '#u': f"unit_{meter_type}",
                     '#em': f"eval_mode_{meter_type}",
-                    '#t': f"title_{meter_type}"
+                    '#t': f"title_{meter_type}",
+                    '#f': f"formula_{meter_type}"
                 },
                 ExpressionAttributeValues={
                     ':mt': {'L': dynamo_list}

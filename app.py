@@ -72,8 +72,8 @@ def main():
                 st.session_state.language = selected_lang
                 st.rerun()
 
-            if st.button(f"⚙️ {t('Define Data Categories')}", width="stretch", type="primary" if st.session_state.current_page == "Define Data Categories" else "secondary"):
-                st.session_state.current_page = "Define Data Categories"
+            if st.button(f"⚙️ {t('Define Data Series')}", width="stretch", type="primary" if st.session_state.current_page == "Define Data Series" else "secondary"):
+                st.session_state.current_page = "Define Data Series"
                 st.rerun()
             
             st.divider()
@@ -90,7 +90,7 @@ def main():
             ai_data_entry_page(db, user)
         elif st.session_state.current_page == "AI Analysis":
             ai_analytics_page(db, user)
-        elif st.session_state.current_page == "Define Data Categories":
+        elif st.session_state.current_page in ("Define Data Series", "Define Data Categories"):
             settings_page(db, user)
 
 if __name__ == "__main__":

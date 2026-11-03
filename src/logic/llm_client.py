@@ -47,7 +47,7 @@ class LLMClient:
             unit = str(info.get('unit', 'Units')).replace("<", "").replace(">", "")
             safe_meter_type = str(meter_type).replace("<", "").replace(">", "")
             raw_mode = info.get('mode', 'difference')
-            mode_label = "consumption_sum" if raw_mode == "difference" else "direct_average"
+            mode_label = "direct_average" if raw_mode == "absolute" else "consumption_sum"
             df = info.get('df')
             
             if df is None or df.empty:
