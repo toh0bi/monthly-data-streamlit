@@ -20,7 +20,7 @@ Keep track of any monthly data you care about:
 *   🤖 **AI Analysis:** Chat with your data using advanced AI.
 *   📱 **Mobile Friendly:** Works great on your phone.
 
-**Please log in or register to continue.**
+👈 **Please log in or register in the sidebar to continue.**
 """,
         "CHAT_GREETING": "Hello! I have access to your monthly data. Ask me about trends, comparisons or details – for example 'How was my electricity consumption in 2023?', 'Analyze my weight trend' or 'Is it raining more this year than last year?'.",
         "MODE_HELP_COUNTER": "Use this for meters that simply count up (like Electricity, Gas, Water meters).\nThe app will calculate the monthly usage by subtracting the previous month's value from the current reading.",
@@ -45,7 +45,7 @@ Verfolge monatliche Daten, die dir wichtig sind:
 *   🤖 **KI Analyse:** Chatte mit deinen Daten durch fortschrittliche KI.
 *   📱 **Mobilfreundlich:** Funktioniert hervorragend auf deinem Handy.
 
-**Bitte melde dich an oder registriere dich, um fortzufahren.**
+👈 **Bitte melde dich in der Sidebar an oder registriere dich, um fortzufahren.**
 """,
 
         # App / Navigation

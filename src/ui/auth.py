@@ -113,31 +113,12 @@ def auth_flow(db: DBHandler):
     if 'user' in st.session_state:
         return st.session_state['user']
     
-    # Language selector available before login (compact, top-right)
-    col_title, col_lang = st.columns([3, 1], vertical_alignment="center")
-    with col_lang:
-        lang_options = {"en": "🇬🇧 English", "de": "🇩🇪 Deutsch"}
-        selected_lang = st.selectbox(
-            "Language / Sprache",
-            options=list(lang_options.keys()),
-            format_func=lambda x: lang_options[x],
-            index=0 if st.session_state.get('language', 'en') == 'en' else 1,
-            label_visibility="collapsed"
-        )
-        if selected_lang != st.session_state.get('language', 'en'):
-            st.session_state.language = selected_lang
-            st.rerun()
-
-    with col_title:
-        st.title(t("Welcome to Monthly Data Bot 📊"))
-
-    # Login/Register form directly in the main area (no sidebar needed, mobile friendly)
-    col_form, col_info = st.columns(2, gap="large")
-
-    with col_form:
+    # Sidebar: Login & Register
+    with st.sidebar:
         if os.path.exists("logo.png"):
-            st.image("logo.png", width=200)
-
+            st.image("logo.png", width="stretch")
+        st.title(t("Monthly Data Bot"))
+        
         tab_login, tab_register = st.tabs([t("Login"), t("Register")])
         
         with tab_login:
@@ -146,7 +127,9 @@ def auth_flow(db: DBHandler):
         with tab_register:
             register_form(db)
 
-    with col_info:
-        st.markdown(t("HOME_PAGE_DESCRIPTION"))
+    # Main Area: Description
+    st.title(t("Welcome to Monthly Data Bot 📊"))
+    
+    st.markdown(t("HOME_PAGE_DESCRIPTION"))
     
     return None

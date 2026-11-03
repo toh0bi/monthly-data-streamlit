@@ -10,7 +10,6 @@ A Streamlit application for tracking and visualizing monthly meter readings (e.g
 -   **AI Data Import:** Extract structured readings from unstructured text or photos/scans via AWS Bedrock.
 -   **AI Analysis:** Interactive chat to analyze your monthly data (with monthly per-user request quotas).
 -   **Meter Management:** Define, reorder, and customize different types of meters (`difference` vs. `absolute` evaluation modes).
--   **Mobile-First Navigation:** Top navigation bar and main-area login — no sidebar interaction required (needs Streamlit ≥ 1.46).
 -   **Cloud Storage:** Uses AWS DynamoDB for reliable data persistence.
 
 ## Prerequisites
