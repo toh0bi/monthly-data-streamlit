@@ -1,7 +1,9 @@
 import streamlit as st
+from datetime import datetime
 from src.data.db_handler import DBHandler
 from src.data.models import User
 from src.logic.analytics import validate_formula
+from src.ui.ai_analytics import QUOTA_LIMIT
 from src.ui.i18n import t
 
 def _append_to_formula_state(state_key: str, token: str):
@@ -205,6 +207,9 @@ def settings_page(db: DBHandler, user: User):
     st.subheader(t("System & Quota"))
     st.caption(f"{t('Logged in as')}: {user.username}")
     
+    current_month_str = datetime.now().strftime("%Y-%m")
+    quota_used = user.ai_quota_used if user.quota_month == current_month_str else 0
+
     col_q1, col_q2 = st.columns(2)
-    col_q1.metric(t("AI Requests Used (Month)"), f"{user.ai_quota_used} / 50")
+    col_q1.metric(t("AI Requests Used (Month)"), f"{quota_used} / {QUOTA_LIMIT}")
     col_q2.metric(t("Data Series"), len(current_types))
