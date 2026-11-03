@@ -54,6 +54,11 @@ def settings_page(db: DBHandler, user: User):
     st.header(t("Define Data Series"))
     st.caption(t("Here you can define what kind of data you want to track. This can be utility meters (electricity, water), personal metrics (weight, rainfall) or calculated series based on formulas."))
     
+    if st.session_state.pop("_clear_new_series_inputs", False):
+        st.session_state["new_series_name"] = ""
+        st.session_state["new_series_unit"] = ""
+        st.session_state["new_series_formula"] = ""
+
     metadata = db.get_user_metadata(user.user_id)
     current_types = [mt for mt in metadata['meter_types'] if mt != 'none']
     configs = metadata['configs']
@@ -115,8 +120,8 @@ def settings_page(db: DBHandler, user: User):
             db.update_meter_config(user.user_id, new_type, 'eval_mode', selected_mode)
             if selected_mode == 'formula':
                 db.update_meter_config(user.user_id, new_type, 'formula', formula_str)
-                st.session_state["new_series_formula"] = ""
 
+            st.session_state["_clear_new_series_inputs"] = True
             st.success(t("Added {}", new_type))
             st.rerun()
             
